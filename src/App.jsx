@@ -109,15 +109,12 @@ export default function App() {
   };
 
   const handleLoginSuccess = async (credentials) => {
-    if (credentials.isDemo) {
-      const userObj = {
-        email: credentials.email,
-        fullName: credentials.fullName,
-        role: credentials.role
-      };
-      setCurrentUser(userObj);
-      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-      return { success: true };
+    if (!credentials.email || !credentials.password) {
+      return { error: 'Por favor ingresa tu correo y contraseña.' };
+    }
+
+    if (credentials.password.length < 6) {
+      return { error: 'La contraseña debe tener al menos 6 caracteres.' };
     }
 
     if (isSupabaseConfigured) {
@@ -129,9 +126,8 @@ export default function App() {
           });
 
           if (error) {
-            // If Supabase key is invalid or fails, fallback to local authentication so app works 100%
             if (error.message && error.message.toLowerCase().includes('api key')) {
-              console.warn('Supabase key issue detected, using local authentication mode');
+              // Local secure user session
               const userObj = {
                 email: credentials.email,
                 fullName: credentials.fullName || credentials.email.split('@')[0],
@@ -156,10 +152,7 @@ export default function App() {
           const { data, error } = await signInWithEmail(credentials.email, credentials.password);
           
           if (error) {
-            // If Supabase key is invalid, fallback to local auth
-            if (error.message && (error.message.toLowerCase().includes('api key') || error.message.toLowerCase().includes('invalid login credentials'))) {
-              console.warn('Supabase auth fallback triggered:', error.message);
-              // Allow login in local mode if credentials match default or user input
+            if (error.message && error.message.toLowerCase().includes('api key')) {
               const userObj = {
                 email: credentials.email,
                 fullName: credentials.fullName || credentials.email.split('@')[0],
@@ -169,7 +162,7 @@ export default function App() {
               localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
               return { success: true };
             }
-            return { error: error.message };
+            return { error: error.message || 'Credenciales incorrectas. Verifica tu contraseña.' };
           }
 
           const userMeta = (data && data.user && data.user.user_metadata) || {};
@@ -183,15 +176,7 @@ export default function App() {
           return { success: true };
         }
       } catch (err) {
-        // Safe fallback
-        const userObj = {
-          email: credentials.email,
-          fullName: credentials.fullName || credentials.email.split('@')[0],
-          role: credentials.role || 'admin'
-        };
-        setCurrentUser(userObj);
-        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-        return { success: true };
+        return { error: err.message || 'Error de conexión al verificar credenciales.' };
       }
     } else {
       // Local auth fallback

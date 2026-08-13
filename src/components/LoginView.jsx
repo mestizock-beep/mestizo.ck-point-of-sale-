@@ -43,20 +43,6 @@ export default function LoginView({ onLoginSuccess }) {
     }
   };
 
-  const handleQuickSelectCredential = (selectedRole) => {
-    if (selectedRole === 'admin') {
-      setEmail('usiel@restaurantemestizo.com');
-      setPassword('Mestizo2026!');
-      setFullName('Usiel (Administrador)');
-      setRole('admin');
-    } else {
-      setEmail('cajero@restaurantemestizo.com');
-      setPassword('Caja123456');
-      setFullName('Cajero de Turno');
-      setRole('cajero');
-    }
-  };
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -242,59 +228,6 @@ export default function LoginView({ onLoginSuccess }) {
               <ArrowRight size={18} />
             </button>
           </form>
-
-          {/* Quick Access Helper */}
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px dashed var(--sand-border)' }}>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-subdued)', display: 'block', textAlign: 'center', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Autocompletar Credenciales de Muestra
-            </span>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => handleQuickSelectCredential('admin')}
-                style={{
-                  padding: '9px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--sand-border)',
-                  backgroundColor: 'var(--sand-bg)',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  color: 'var(--terracotta)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <ShieldCheck size={16} />
-                <span>Usiel (Admin)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickSelectCredential('cajero')}
-                style={{
-                  padding: '9px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--sand-border)',
-                  backgroundColor: 'var(--sand-bg)',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  color: 'var(--dark-text)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Store size={16} />
-                <span>Cajero</span>
-              </button>
-            </div>
-          </div>
 
           <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
             <button
