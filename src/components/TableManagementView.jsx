@@ -633,8 +633,30 @@ export default function TableManagementView({
               placeholder="Ej: Sin cebolla, poco hielo, etc."
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--sand-border)', marginBottom: '1rem', fontSize: '0.9rem' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--sand-border)', marginBottom: '0.75rem', fontSize: '0.9rem' }}
             />
+
+            {/* Quick preset tags */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              {['Sin cebolla', 'Salsa aparte', 'Hielo extra', 'Sin hielo', 'Para llevar', 'Bien cocido'].map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setNoteInput(prev => prev ? `${prev}, ${tag}` : tag)}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--sand-border)',
+                    backgroundColor: 'var(--sand-bg)',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  +{tag}
+                </button>
+              ))}
+            </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button onClick={() => setItemNoteModal(null)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--sand-border)', background: '#FFF' }}>
                 Cancelar

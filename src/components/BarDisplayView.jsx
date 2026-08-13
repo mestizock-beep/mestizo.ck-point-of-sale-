@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { GlassWater, Clock, CheckCircle, RefreshCw, Wine } from 'lucide-react';
+import { GlassWater, Clock, CheckCircle, RefreshCw, Wine, BellRing, BellOff } from 'lucide-react';
 import { getKitchenTickets, saveKitchenTickets } from '../utils/storage';
+import { playNotificationBell } from '../utils/audioHelper';
 
 export default function BarDisplayView() {
   const [tickets, setTickets] = useState([]);
   const [now, setNow] = useState(Date.now());
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [prevCount, setPrevCount] = useState(0);
 
   const loadTickets = () => {
     const allTickets = getKitchenTickets();
-    // Filter only bar tickets that are not completed
     const barOnly = allTickets.filter(t => t.type === 'bar' && t.status !== 'completed');
+    
+    if (barOnly.length > prevCount && prevCount > 0 && soundEnabled) {
+      playNotificationBell();
+    }
+    setPrevCount(barOnly.length);
     setTickets(barOnly);
   };
 
@@ -18,10 +25,10 @@ export default function BarDisplayView() {
     const timer = setInterval(() => {
       setNow(Date.now());
       loadTickets();
-    }, 5000);
+    }, 4000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [prevCount, soundEnabled]);
 
   const handleMarkItemDone = (ticketId, itemIdx) => {
     const allTickets = getKitchenTickets();
@@ -86,22 +93,46 @@ export default function BarDisplayView() {
           </div>
         </div>
 
-        <button
-          onClick={loadTickets}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '8px',
-            border: '1px solid var(--sand-border)',
-            backgroundColor: '#FFF',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            cursor: 'pointer'
-          }}
-        >
-          <RefreshCw size={14} />
-          <span>Actualizar</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => {
+              setSoundEnabled(!soundEnabled);
+              if (!soundEnabled) playNotificationBell();
+            }}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: soundEnabled ? '1px solid var(--terracotta)' : '1px solid var(--sand-border)',
+              backgroundColor: soundEnabled ? 'var(--sand-muted)' : '#FFF',
+              color: soundEnabled ? 'var(--terracotta)' : 'var(--dark-subdued)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              fontWeight: 700
+            }}
+          >
+            {soundEnabled ? <BellRing size={16} /> : <BellOff size={16} />}
+            <span>{soundEnabled ? 'Timbre Activado' : 'Sin Sonido'}</span>
+          </button>
+
+          <button
+            onClick={loadTickets}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--sand-border)',
+              backgroundColor: '#FFF',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <RefreshCw size={14} />
+            <span>Actualizar</span>
+          </button>
+        </div>
       </div>
 
       {tickets.length === 0 ? (

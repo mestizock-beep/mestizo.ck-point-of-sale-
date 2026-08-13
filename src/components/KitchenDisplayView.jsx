@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Utensils, Clock, CheckCircle, AlertTriangle, Flame, BellRing, RefreshCw } from 'lucide-react';
+import { Utensils, Clock, CheckCircle, AlertTriangle, Flame, BellRing, BellOff, RefreshCw } from 'lucide-react';
 import { getKitchenTickets, saveKitchenTickets } from '../utils/storage';
+import { playNotificationBell } from '../utils/audioHelper';
 
 export default function KitchenDisplayView() {
   const [tickets, setTickets] = useState([]);
   const [now, setNow] = useState(Date.now());
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [prevCount, setPrevCount] = useState(0);
 
   const loadTickets = () => {
     const allTickets = getKitchenTickets();
-    // Filter only kitchen tickets that are not completed
     const kitchenOnly = allTickets.filter(t => t.type === 'kitchen' && t.status !== 'completed');
+    
+    // Play bell chime if new ticket arrived
+    if (kitchenOnly.length > prevCount && prevCount > 0 && soundEnabled) {
+      playNotificationBell();
+    }
+    setPrevCount(kitchenOnly.length);
     setTickets(kitchenOnly);
   };
 
@@ -18,10 +26,10 @@ export default function KitchenDisplayView() {
     const timer = setInterval(() => {
       setNow(Date.now());
       loadTickets();
-    }, 5000); // refresh every 5s
+    }, 4000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [prevCount, soundEnabled]);
 
   const handleMarkItemDone = (ticketId, itemIdx) => {
     const allTickets = getKitchenTickets();
@@ -100,6 +108,28 @@ export default function KitchenDisplayView() {
             <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--danger)' }} />
             <span>🔴 &gt; 10 min (URGENTE)</span>
           </div>
+
+          <button
+            onClick={() => {
+              setSoundEnabled(!soundEnabled);
+              if (!soundEnabled) playNotificationBell();
+            }}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: soundEnabled ? '1px solid var(--terracotta)' : '1px solid var(--sand-border)',
+              backgroundColor: soundEnabled ? 'var(--sand-muted)' : '#FFF',
+              color: soundEnabled ? 'var(--terracotta)' : 'var(--dark-subdued)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              fontWeight: 700
+            }}
+          >
+            {soundEnabled ? <BellRing size={16} /> : <BellOff size={16} />}
+            <span>{soundEnabled ? 'Timbre Activado' : 'Sin Sonido'}</span>
+          </button>
 
           <button
             onClick={loadTickets}
