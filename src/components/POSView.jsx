@@ -233,26 +233,43 @@ export default function POSView({
           </div>
 
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  border: selectedCategory === cat ? '1px solid var(--terracotta)' : '1px solid var(--sand-border)',
-                  backgroundColor: selectedCategory === cat ? 'var(--terracotta)' : 'var(--sand-bg)',
-                  color: selectedCategory === cat ? '#FFFFFF' : 'var(--dark-text)',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
+            {categories.map(cat => {
+              const getEmoji = (c) => {
+                if (c === 'Botanas') return '🍟';
+                if (c === 'Tacos') return '🌮';
+                if (c === 'Volcanes') return '🌋';
+                if (c === 'Tortas') return '🥪';
+                if (c === 'Especiales') return '⭐';
+                if (c === 'Cervezas') return '🍺';
+                if (c === 'Miches') return '🍹';
+                if (c === 'Cócteles') return '🍸';
+                if (c === 'Sin Alcohol') return '🥤';
+                if (c === 'El Último Antojo') return '🍰';
+                return '🍽️';
+              };
+
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: selectedCategory === cat ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                    backgroundColor: selectedCategory === cat ? 'var(--terracotta)' : 'var(--sand-bg)',
+                    color: selectedCategory === cat ? '#FFFFFF' : 'var(--dark-text)',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: selectedCategory === cat ? 'var(--shadow-sm)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {getEmoji(cat)} {cat}
+                </button>
+              );
+            })}
           </div>
         </div>
 

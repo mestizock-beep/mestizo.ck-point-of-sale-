@@ -416,27 +416,45 @@ export default function TableManagementView({
                   />
                 </div>
 
-                {/* Categories */}
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setSelectedCategory(cat)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '16px',
-                        border: selectedCategory === cat ? '1px solid var(--terracotta)' : '1px solid var(--sand-border)',
-                        backgroundColor: selectedCategory === cat ? 'var(--terracotta)' : 'var(--sand-bg)',
-                        color: selectedCategory === cat ? '#FFF' : 'var(--dark-text)',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        whiteSpace: 'nowrap',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                {/* Categories Pills */}
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '6px' }} className="no-scrollbar">
+                  {categories.map(cat => {
+                    const getEmoji = (c) => {
+                      if (c === 'Botanas') return '🍟';
+                      if (c === 'Tacos') return '🌮';
+                      if (c === 'Volcanes') return '🌋';
+                      if (c === 'Tortas') return '🥪';
+                      if (c === 'Especiales') return '⭐';
+                      if (c === 'Cervezas') return '🍺';
+                      if (c === 'Miches') return '🍹';
+                      if (c === 'Cócteles') return '🍸';
+                      if (c === 'Sin Alcohol') return '🥤';
+                      if (c === 'El Último Antojo') return '🍰';
+                      return '🍽️';
+                    };
+
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '18px',
+                          border: selectedCategory === cat ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                          backgroundColor: selectedCategory === cat ? 'var(--terracotta)' : 'var(--sand-bg)',
+                          color: selectedCategory === cat ? '#FFF' : 'var(--dark-text)',
+                          fontSize: '0.82rem',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer',
+                          boxShadow: selectedCategory === cat ? 'var(--shadow-sm)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {getEmoji(cat)} {cat}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Product Grid */}
