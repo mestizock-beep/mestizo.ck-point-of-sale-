@@ -13,7 +13,7 @@ export default function POSView({
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [tipPercent, setTipPercent] = useState(10);
+  const [tipPercent, setTipPercent] = useState(0);
   const [itemNoteModal, setItemNoteModal] = useState(null);
   const [noteInput, setNoteInput] = useState('');
   const [shiftLockError, setShiftLockError] = useState(null);
@@ -60,7 +60,7 @@ export default function POSView({
           const newQty = item.quantity + delta;
           if (newQty <= 0) return null;
           if (newQty > item.stock) {
-            alert(`Stock máximo alcanzado para este producto (${item.stock} disps.)`);
+            alert(`Stock máximo alcanzado para "${item.name}". Stock: ${item.stock}`);
             return item;
           }
           return { ...item, quantity: newQty };
@@ -86,6 +86,9 @@ export default function POSView({
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const discountAmount = (subtotal * discountPercent) / 100;
   const subtotalWithDiscount = Math.max(0, subtotal - discountAmount);
+  const tipAmount = (subtotalWithDiscount * tipPercent) / 100;
+  const total = subtotalWithDiscount + tipAmount;
+
   const handleAttemptCheckout = () => {
     if (!currentShift || !currentShift.isOpen) {
       alert('Atención: La caja no está abierta actualmente. Debes abrir el turno en "Corte de Caja" para cobrar.');
@@ -127,7 +130,7 @@ export default function POSView({
       minHeight: 'calc(100vh - 72px)',
       gap: isMobile ? '0.75rem' : '1.25rem',
       padding: isMobile ? '0.75rem' : '1.25rem',
-      overflow: 'hidden',
+      overflow: isMobile ? 'visible' : 'hidden',
       paddingBottom: (isMobile && cart.length > 0 && mobileTab === 'menu') ? '80px' : (isMobile ? '0.75rem' : '1.25rem')
     }}>
       

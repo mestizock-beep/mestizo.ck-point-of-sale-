@@ -37,7 +37,7 @@ import { supabase, isSupabaseConfigured, signInWithEmail, signUpWithEmail, signO
 const USER_SESSION_KEY = 'mestizo_pos_user_session';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('pos');
+  const [activeTab, setActiveTab] = useState('tables');
   const [currentUser, setCurrentUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   
