@@ -18,6 +18,11 @@ export default function POSView({
   const [noteInput, setNoteInput] = useState('');
   const [shiftLockError, setShiftLockError] = useState(null);
   
+  // Quick Instant Customizer state
+  const [quickAddProduct, setQuickAddProduct] = useState(null);
+  const [selectedChips, setSelectedChips] = useState([]);
+  const [customNoteText, setCustomNoteText] = useState('');
+
   const [mobileTab, setMobileTab] = useState('menu'); // 'menu' | 'cart'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
@@ -34,23 +39,54 @@ export default function POSView({
     return matchesCategory && matchesSearch;
   });
 
-  const addToCart = (product) => {
+  const handleOpenQuickAdd = (product) => {
     if (product.stock <= 0) return;
+    setQuickAddProduct(product);
+    setSelectedChips([]);
+    setCustomNoteText('');
+  };
 
+  const toggleChip = (chipText) => {
+    if (chipText === 'Con todo (Normal)') {
+      setSelectedChips([]);
+      return;
+    }
+    setSelectedChips(prev => prev.includes(chipText) ? prev.filter(c => c !== chipText) : [...prev, chipText]);
+  };
+
+  const handleConfirmQuickAdd = () => {
+    if (!quickAddProduct) return;
+    const notesArray = [...selectedChips];
+    if (customNoteText.trim()) notesArray.push(customNoteText.trim());
+    const finalNote = notesArray.join(', ');
+
+    addToCartCustomized(quickAddProduct, finalNote);
+
+    setQuickAddProduct(null);
+    setSelectedChips([]);
+    setCustomNoteText('');
+  };
+
+  const addToCartCustomized = (product, note = '') => {
+    if (product.stock <= 0) return;
     setCart(prevCart => {
-      const existing = prevCart.find(item => item.id === product.id);
+      const existing = prevCart.find(item => item.id === product.id && (item.note || '') === note);
       if (existing) {
         if (existing.quantity >= product.stock) {
           alert(`No hay más unidades disponibles de "${product.name}". Stock actual: ${product.stock}`);
           return prevCart;
         }
         return prevCart.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          (item.id === product.id && (item.note || '') === note) ? { ...item, quantity: item.quantity + 1 } : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1, note: '' }];
+        return [...prevCart, { ...product, quantity: 1, note }];
       }
     });
+  };
+
+  const addToCart = (product) => {
+    addToCartCustomized(product, '');
   };
 
   const updateQuantity = (id, delta) => {
@@ -288,7 +324,7 @@ export default function POSView({
               <div
                 key={product.id}
                 className="animate-fade-in"
-                onClick={() => !isOutOfStock && addToCart(product)}
+                onClick={() => !isOutOfStock && handleOpenQuickAdd(product)}
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderRadius: 'var(--radius-md)',
@@ -318,7 +354,7 @@ export default function POSView({
                       backgroundColor: 'var(--danger)',
                       color: '#FFF',
                       fontSize: '0.72rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                       padding: '3px 8px',
                       borderRadius: '12px'
                     }}>
@@ -332,11 +368,11 @@ export default function POSView({
                       backgroundColor: 'var(--warning)',
                       color: '#FFF',
                       fontSize: '0.72rem',
-                      fontWeight: 800,
+                      fontWeight: 700,
                       padding: '3px 8px',
                       borderRadius: '12px'
                     }}>
-                      Quedan {product.stock}
+                      Últimos {product.stock}
                     </span>
                   ) : (
                     <span style={{
@@ -371,6 +407,11 @@ export default function POSView({
                     </span>
                     <button
                       disabled={isOutOfStock}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isOutOfStock) addToCart(product);
+                      }}
+                      title="Agregar directo sin modificaciones"
                       style={{
                         backgroundColor: isOutOfStock ? '#CCC' : 'var(--terracotta)',
                         color: '#FFF',

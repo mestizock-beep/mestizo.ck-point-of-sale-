@@ -17,6 +17,11 @@ export default function TableManagementView({
   const [noteInput, setNoteInput] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Quick Instant Customizer state
+  const [quickAddProduct, setQuickAddProduct] = useState(null);
+  const [selectedChips, setSelectedChips] = useState([]);
+  const [customNoteText, setCustomNoteText] = useState('');
+
   const currentWaiterName = currentUser?.fullName || currentUser?.email?.split('@')[0] || 'Mesero';
 
   // Filter products for adding to table
@@ -25,6 +30,43 @@ export default function TableManagementView({
     const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchSearch;
   });
+
+  const handleOpenQuickAdd = (product) => {
+    if (product.stock <= 0) return;
+    setQuickAddProduct(product);
+    setSelectedChips([]);
+    setCustomNoteText('');
+  };
+
+  const toggleChip = (chipText) => {
+    if (chipText === 'Con todo (Normal)') {
+      setSelectedChips([]);
+      return;
+    }
+    setSelectedChips(prev => {
+      if (prev.includes(chipText)) {
+        return prev.filter(c => c !== chipText);
+      } else {
+        return [...prev, chipText];
+      }
+    });
+  };
+
+  const handleConfirmQuickAdd = () => {
+    if (!quickAddProduct) return;
+    const notesArray = [...selectedChips];
+    if (customNoteText.trim()) notesArray.push(customNoteText.trim());
+    const finalNote = notesArray.join(', ');
+
+    handleAddItemToTable({
+      ...quickAddProduct,
+      note: finalNote
+    });
+
+    setQuickAddProduct(null);
+    setSelectedChips([]);
+    setCustomNoteText('');
+  };
 
   const handleSelectTable = (table) => {
     // Clone table object to local active state
@@ -514,7 +556,7 @@ export default function TableManagementView({
                   {filteredProducts.map(prod => (
                     <div
                       key={prod.id}
-                      onClick={() => handleAddItemToTable(prod)}
+                      onClick={() => handleOpenQuickAdd(prod)}
                       style={{
                         backgroundColor: '#FFF',
                         borderRadius: '8px',
@@ -525,7 +567,8 @@ export default function TableManagementView({
                         flexDirection: 'column',
                         justifyContent: 'space-between',
                         minHeight: '85px',
-                        transition: 'transform 0.1s ease'
+                        transition: 'transform 0.1s ease',
+                        position: 'relative'
                       }}
                     >
                       <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark-text)' }}>
@@ -535,7 +578,24 @@ export default function TableManagementView({
                         <span style={{ fontWeight: 800, color: 'var(--terracotta)', fontSize: '0.88rem' }}>
                           ${prod.price.toFixed(2)}
                         </span>
-                        <div style={{ backgroundColor: 'var(--terracotta)', color: '#FFF', width: '22px', height: '22px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddItemToTable(prod);
+                          }}
+                          title="Agregar directo sin modificaciones"
+                          style={{
+                            backgroundColor: 'var(--terracotta)',
+                            color: '#FFF',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                          }}
+                        >
                           <Plus size={14} />
                         </div>
                       </div>
@@ -731,10 +791,146 @@ export default function TableManagementView({
               <button onClick={() => setItemNoteModal(null)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--sand-border)', background: '#FFF' }}>
                 Cancelar
               </button>
-              <button onClick={handleSaveItemNote} style={{ padding: '6px 12px', borderRadius: '6px', border: 'none', background: 'var(--terracotta)', color: '#FFF', fontWeight: 700 }}>
-                Guardar Nota
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instant Quick Customizer Modal */}
+      {quickAddProduct && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 250,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div className="animate-fade-in" style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+            width: '100%',
+            maxWidth: '420px',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--sand-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase' }}>
+                  {quickAddProduct.category}
+                </span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--dark-text)' }}>
+                  {quickAddProduct.name}
+                </h3>
+              </div>
+              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--terracotta)' }}>
+                ${quickAddProduct.price.toFixed(2)}
+              </span>
+            </div>
+
+            <div style={{ borderTop: '1px solid var(--sand-border)', paddingTop: '0.85rem' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '8px' }}>
+                Selecciona modificaciones con 1 toque:
+              </label>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {(quickAddProduct.category.toLowerCase().includes('miche') || quickAddProduct.category.toLowerCase().includes('coctel') || quickAddProduct.category.toLowerCase().includes('cerveza') || quickAddProduct.category.toLowerCase().includes('bebida') || quickAddProduct.category.toLowerCase().includes('alcohol')
+                  ? ['Sin hielo', 'Poco hielo', 'Con poco chile', 'Sin chile', 'Limón extra', 'Para llevar']
+                  : ['Sin cebolla', 'Sin cilantro', 'Sin salsa', 'Salsa aparte', 'Con todo (Normal)', 'Limón extra', 'Bien cocido', 'Para llevar']
+                ).map(chip => {
+                  const isSelected = selectedChips.includes(chip);
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => toggleChip(chip)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '20px',
+                        border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                        backgroundColor: isSelected ? 'var(--terracotta)' : 'var(--sand-bg)',
+                        color: isSelected ? '#FFFFFF' : 'var(--dark-text)',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {isSelected ? `✓ ${chip}` : chip}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--dark-subdued)', display: 'block', marginBottom: '4px' }}>
+                Otra especificación opcional:
+              </label>
+              <input
+                type="text"
+                placeholder="Ej: Extra queso, término medio..."
+                value={customNoteText}
+                onChange={(e) => setCustomNoteText(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--sand-border)',
+                  fontSize: '0.88rem'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={() => setQuickAddProduct(null)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--sand-border)',
+                  backgroundColor: '#FFF',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmQuickAdd}
+                style={{
+                  flex: 2,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'var(--terracotta)',
+                  color: '#FFF',
+                  fontWeight: 800,
+                  fontSize: '0.92rem',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-md)'
+                }}
+              >
+                🚀 AGREGAR A MESA
               </button>
             </div>
+
           </div>
         </div>
       )}
