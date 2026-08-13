@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Branding Colors based on logo & background image */
+  --terracotta: #A64B2A;
+  --terracotta-dark: #83371C;
+  --terracotta-light: #C8613C;
+  --terracotta-glow: rgba(166, 75, 42, 0.15);
+
+  --gold: #D49B4B;
+  --gold-light: #F7E9D4;
+  --gold-dark: #A8732B;
+
+  --sand-bg: #FAF5EE;
+  --sand-card: #FFFFFF;
+  --sand-muted: #F2E8DC;
+  --sand-border: #E5D7C5;
+
+  --dark-text: #1C2B22;
+  --dark-subdued: #4B5A51;
+  --dark-green: #23352B;
+
+  --success: #2E7D32;
+  --success-bg: #E8F5E9;
+  --warning: #ED6C02;
+  --warning-bg: #FFF3E0;
+  --danger: #D32F2F;
+  --danger-bg: #FFEBEE;
+
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  --shadow-sm: 0 2px 8px rgba(28, 43, 34, 0.05);
+  --shadow-md: 0 6px 18px rgba(28, 43, 34, 0.08);
+  --shadow-lg: 0 12px 32px rgba(28, 43, 34, 0.12);
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--sand-bg);
+  color: var(--dark-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: radial-gradient(rgba(166, 75, 42, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--sand-muted);
+}
+::-webkit-scrollbar-thumb {
+  background: #D5C6B5;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--terracotta);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(166, 75, 42, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(166, 75, 42, 0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+.font-brand {
+  font-family: var(--font-serif);
+  letter-spacing: 0.04em;
+}
+
+.heading-xl {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--dark-text);
+  line-height: 1.15;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-ticket, #printable-ticket * {
+    visibility: visible;
+  }
+  #printable-ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
