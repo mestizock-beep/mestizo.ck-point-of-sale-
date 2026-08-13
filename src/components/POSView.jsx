@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 
 export default function POSView({
   products,
@@ -15,6 +15,15 @@ export default function POSView({
   const [tipPercent, setTipPercent] = useState(10);
   const [itemNoteModal, setItemNoteModal] = useState(null);
   const [noteInput, setNoteInput] = useState('');
+  
+  const [mobileTab, setMobileTab] = useState('menu'); // 'menu' | 'cart'
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'Todos' || product.category === selectedCategory;
@@ -79,9 +88,68 @@ export default function POSView({
   const total = subtotalWithDiscount + tipAmount;
 
   return (
-    <div style={{ display: 'flex', flex: 1, minHeight: 'calc(100vh - 72px)', gap: '1.25rem', padding: '1.25rem', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      flex: 1,
+      minHeight: 'calc(100vh - 72px)',
+      gap: isMobile ? '0.75rem' : '1.25rem',
+      padding: isMobile ? '0.75rem' : '1.25rem',
+      overflow: 'hidden',
+      paddingBottom: (isMobile && cart.length > 0 && mobileTab === 'menu') ? '80px' : (isMobile ? '0.75rem' : '1.25rem')
+    }}>
       
-      <div style={{ flex: '1 1 0%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Mobile Top Segmented Tab Switcher */}
+      {isMobile && (
+        <div style={{ display: 'flex', gap: '6px', backgroundColor: 'var(--sand-muted)', padding: '4px', borderRadius: '12px' }}>
+          <button
+            onClick={() => setMobileTab('menu')}
+            style={{
+              flex: 1,
+              padding: '10px',
+              borderRadius: '9px',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              backgroundColor: mobileTab === 'menu' ? 'var(--terracotta)' : 'transparent',
+              color: mobileTab === 'menu' ? '#FFFFFF' : 'var(--dark-subdued)'
+            }}
+          >
+            🍔 Menú de Platillos
+          </button>
+          <button
+            onClick={() => setMobileTab('cart')}
+            style={{
+              flex: 1,
+              padding: '10px',
+              borderRadius: '9px',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: '0.88rem',
+              cursor: 'pointer',
+              backgroundColor: mobileTab === 'cart' ? 'var(--terracotta)' : 'transparent',
+              color: mobileTab === 'cart' ? '#FFFFFF' : 'var(--dark-subdued)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ShoppingCart size={16} />
+            <span>Comanda ({cart.reduce((a, c) => a + c.quantity, 0)})</span>
+          </button>
+        </div>
+      )}
+
+      {/* Left Column: Menu & Products */}
+      <div style={{
+        flex: '1 1 0%',
+        minWidth: 0,
+        display: (isMobile && mobileTab !== 'menu') ? 'none' : 'flex',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
         
         {!currentShift || !currentShift.isOpen ? (
           <div style={{
@@ -103,18 +171,18 @@ export default function POSView({
 
         <div style={{
           backgroundColor: '#FFFFFF',
-          padding: '1.25rem',
+          padding: '1rem',
           borderRadius: 'var(--radius-md)',
           boxShadow: 'var(--shadow-sm)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '1rem'
+          gap: '0.85rem'
         }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--dark-subdued)' }} />
             <input
               type="text"
-              placeholder="Buscar platillo, coctel o código SKU..."
+              placeholder="Buscar platillo, coctel o SKU..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -123,14 +191,13 @@ export default function POSView({
                 borderRadius: '10px',
                 border: '1px solid var(--sand-border)',
                 backgroundColor: 'var(--sand-bg)',
-                fontSize: '0.95rem',
-                outline: 'none',
-                transition: 'border 0.2s ease'
+                fontSize: '0.92rem',
+                outline: 'none'
               }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
             {categories.map(cat => (
               <button
                 key={cat}
@@ -156,8 +223,8 @@ export default function POSView({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-          gap: '1rem',
+          gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(135px, 1fr))' : 'repeat(auto-fill, minmax(180px, 1fr))',
+          gap: isMobile ? '0.75rem' : '1rem',
           overflowY: 'auto',
           paddingRight: '4px'
         }}>
@@ -275,17 +342,18 @@ export default function POSView({
         </div>
       </div>
 
+      {/* Right Column: Comanda Actual Sidebar */}
       <div style={{
-        width: '340px',
+        width: isMobile ? '100%' : '340px',
         flexShrink: 0,
         backgroundColor: '#FFFFFF',
         borderRadius: 'var(--radius-md)',
         boxShadow: 'var(--shadow-md)',
         border: '1px solid var(--sand-border)',
-        display: 'flex',
+        display: (isMobile && mobileTab !== 'cart') ? 'none' : 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 96px)',
-        position: 'sticky',
+        height: isMobile ? 'auto' : 'calc(100vh - 96px)',
+        position: isMobile ? 'static' : 'sticky',
         top: '80px'
       }}>
         <div style={{
@@ -568,6 +636,57 @@ export default function POSView({
           </div>
         )}
       </div>
+
+      {/* Floating Bottom Cart Bar for Mobile */}
+      {isMobile && mobileTab === 'menu' && cart.length > 0 && (
+        <div
+          onClick={() => setMobileTab('cart')}
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            bottom: '16px',
+            left: '16px',
+            right: '16px',
+            backgroundColor: 'var(--terracotta)',
+            color: '#FFFFFF',
+            padding: '12px 18px',
+            borderRadius: '16px',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            zIndex: 90,
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <ShoppingCart size={22} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.92rem' }}>
+                {cart.reduce((a, c) => a + c.quantity, 0)} platillos en comanda
+              </div>
+              <div style={{ fontSize: '0.78rem', opacity: 0.9 }}>
+                Total: ${total.toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontWeight: 800,
+            fontSize: '0.85rem',
+            backgroundColor: '#FFFFFF',
+            color: 'var(--terracotta)',
+            padding: '8px 14px',
+            borderRadius: '20px'
+          }}>
+            <span>Ver Orden</span>
+            <ArrowRight size={16} />
+          </div>
+        </div>
+      )}
 
       {itemNoteModal && (
         <div style={{

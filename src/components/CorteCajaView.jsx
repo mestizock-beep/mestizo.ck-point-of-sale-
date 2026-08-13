@@ -39,7 +39,7 @@ export default function CorteCajaView({
   const discrepancy = actualCashInput !== '' ? actualCashNum - expectedCashInDrawer : 0;
 
   return (
-    <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1, width: '100%', minWidth: 0, overflowX: 'hidden' }}>
+    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, width: '100%', minWidth: 0, overflowX: 'hidden' }}>
       
       <div>
         <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>

@@ -120,6 +120,31 @@ body::before {
   line-height: 1.15;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile Responsiveness Improvements */
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
+  
+  .heading-xl {
+    font-size: 1.75rem;
+  }
+
+  /* Prevent elastic bounce issues on mobile web viewports */
+  html, body {
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+}
+
 @media print {
   body * {
     visibility: hidden;

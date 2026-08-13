@@ -36,19 +36,29 @@ export default function Header({
       </div>
 
       {/* Main Navigation Tabs */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--sand-muted)', padding: '4px', borderRadius: '12px' }}>
+      <nav style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        backgroundColor: 'var(--sand-muted)',
+        padding: '4px',
+        borderRadius: '12px',
+        overflowX: 'auto',
+        maxWidth: '100%'
+      }} className="no-scrollbar">
         <button
           onClick={() => setActiveTab('pos')}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
+            gap: '6px',
+            padding: '8px 14px',
             borderRadius: '9px',
             border: 'none',
-            fontSize: '0.9rem',
+            fontSize: '0.88rem',
             fontWeight: 600,
             cursor: 'pointer',
+            whiteSpace: 'nowrap',
             transition: 'all 0.2s ease',
             backgroundColor: activeTab === 'pos' ? 'var(--terracotta)' : 'transparent',
             color: activeTab === 'pos' ? '#FFFFFF' : 'var(--dark-subdued)',
@@ -56,7 +66,7 @@ export default function Header({
           }}
         >
           <ShoppingBag size={18} />
-          Punto de Venta
+          <span>Punto de Venta</span>
         </button>
 
         <button
@@ -64,13 +74,14 @@ export default function Header({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
+            gap: '6px',
+            padding: '8px 14px',
             borderRadius: '9px',
             border: 'none',
-            fontSize: '0.9rem',
+            fontSize: '0.88rem',
             fontWeight: 600,
             cursor: 'pointer',
+            whiteSpace: 'nowrap',
             transition: 'all 0.2s ease',
             backgroundColor: activeTab === 'inventory' ? 'var(--terracotta)' : 'transparent',
             color: activeTab === 'inventory' ? '#FFFFFF' : 'var(--dark-subdued)',
@@ -78,7 +89,7 @@ export default function Header({
           }}
         >
           <Package size={18} />
-          Inventario
+          <span>Inventario</span>
           {lowStockCount > 0 && (
             <span
               style={{
@@ -100,13 +111,14 @@ export default function Header({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
+            gap: '6px',
+            padding: '8px 14px',
             borderRadius: '9px',
             border: 'none',
-            fontSize: '0.9rem',
+            fontSize: '0.88rem',
             fontWeight: 600,
             cursor: 'pointer',
+            whiteSpace: 'nowrap',
             transition: 'all 0.2s ease',
             backgroundColor: activeTab === 'corte' ? 'var(--terracotta)' : 'transparent',
             color: activeTab === 'corte' ? '#FFFFFF' : 'var(--dark-subdued)',
@@ -114,12 +126,12 @@ export default function Header({
           }}
         >
           <Landmark size={18} />
-          Corte de Caja
+          <span>Corte de Caja</span>
         </button>
       </nav>
 
       {/* Right Controls & Status Indicators */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         {lowStockCount > 0 && (
           <button
             onClick={onOpenLowStockModal}
