@@ -12,6 +12,7 @@ import PrinterSettingsModal from './components/PrinterSettingsModal';
 import LowStockModal from './components/LowStockModal';
 import LoginView from './components/LoginView';
 import SettingsModal from './components/SettingsModal';
+import ReportsView from './components/ReportsView';
 
 import {
   initStorage,
@@ -386,6 +387,18 @@ export default function App() {
             shiftHistory={shiftHistory}
             onOpenShift={handleOpenShift}
             onCloseShift={handleCloseShift}
+          />
+        )}
+
+        {activeTab === 'reports' && (
+          <ReportsView
+            salesHistory={[
+              ...(currentShift?.sales || []),
+              ...shiftHistory.flatMap(s => s.sales || [])
+            ]}
+            shiftHistory={shiftHistory}
+            products={products}
+            currentUser={currentUser}
           />
         )}
       </main>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine } from 'lucide-react';
+import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine, BarChart3 } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Header({
@@ -196,6 +196,29 @@ export default function Header({
         >
           <Landmark size={18} />
           <span>Corte de Caja</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('reports')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '9px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+            backgroundColor: activeTab === 'reports' ? 'var(--terracotta)' : 'transparent',
+            color: activeTab === 'reports' ? '#FFFFFF' : 'var(--dark-subdued)',
+            boxShadow: activeTab === 'reports' ? 'var(--shadow-sm)' : 'none'
+          }}
+        >
+          <BarChart3 size={18} />
+          <span>Reportes & Analytics</span>
         </button>
       </nav>
 
