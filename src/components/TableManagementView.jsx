@@ -402,22 +402,30 @@ export default function TableManagementView({
             <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               
               {/* Left Column: Products Selector */}
-              <div style={{ flex: '1 1 55%', borderRight: '1px solid var(--sand-border)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto' }}>
+              <div style={{ flex: '1 1 55%', borderRight: '1px solid var(--sand-border)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', overflowY: 'auto' }}>
                 
-                {/* Search */}
-                <div style={{ position: 'relative', width: '100%' }}>
+                {/* Search Box */}
+                <div style={{ position: 'relative', width: '100%', flexShrink: 0 }}>
                   <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--dark-subdued)' }} />
                   <input
                     type="text"
                     placeholder="Buscar producto o bebida..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: '8px', border: '1px solid var(--sand-border)', backgroundColor: 'var(--sand-bg)', fontSize: '0.88rem' }}
+                    style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '8px', border: '1px solid var(--sand-border)', backgroundColor: 'var(--sand-bg)', fontSize: '0.9rem', outline: 'none' }}
                   />
                 </div>
 
-                {/* Categories Pills */}
-                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '6px' }} className="no-scrollbar">
+                {/* Categories Pills (Always Visible Header Bar) */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  padding: '4px 2px 8px 2px',
+                  flexShrink: 0,
+                  borderBottom: '1px solid var(--sand-border)',
+                  backgroundColor: '#FFF'
+                }} className="no-scrollbar">
                   {categories.map(cat => {
                     const getEmoji = (c) => {
                       if (c === 'Botanas') return '🍟';
@@ -433,25 +441,33 @@ export default function TableManagementView({
                       return '🍽️';
                     };
 
+                    const isSelected = selectedCategory === cat;
+
                     return (
                       <button
                         key={cat}
+                        type="button"
                         onClick={() => setSelectedCategory(cat)}
                         style={{
-                          padding: '7px 14px',
-                          borderRadius: '18px',
-                          border: selectedCategory === cat ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
-                          backgroundColor: selectedCategory === cat ? 'var(--terracotta)' : 'var(--sand-bg)',
-                          color: selectedCategory === cat ? '#FFF' : 'var(--dark-text)',
+                          padding: '8px 14px',
+                          borderRadius: '20px',
+                          border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                          backgroundColor: isSelected ? 'var(--terracotta)' : 'var(--sand-bg)',
+                          color: isSelected ? '#FFFFFF' : 'var(--dark-text)',
                           fontSize: '0.82rem',
-                          fontWeight: 700,
+                          fontWeight: 800,
                           whiteSpace: 'nowrap',
                           cursor: 'pointer',
-                          boxShadow: selectedCategory === cat ? 'var(--shadow-sm)' : 'none',
+                          boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          flexShrink: 0,
                           transition: 'all 0.15s ease'
                         }}
                       >
-                        {getEmoji(cat)} {cat}
+                        <span>{getEmoji(cat)}</span>
+                        <span>{cat}</span>
                       </button>
                     );
                   })}
