@@ -43,17 +43,17 @@ export default function LoginView({ onLoginSuccess }) {
     }
   };
 
-  const handleQuickDemoLogin = (demoRole) => {
-    const demoEmail = demoRole === 'admin' ? 'usiel@restaurantemestizo.com' : 'cajero@restaurantemestizo.com';
-    const demoName = demoRole === 'admin' ? 'Usiel (Administrador)' : 'Cajero de Turno';
-    
-    if (onLoginSuccess) {
-      onLoginSuccess({
-        isDemo: true,
-        email: demoEmail,
-        fullName: demoName,
-        role: demoRole
-      });
+  const handleQuickSelectCredential = (selectedRole) => {
+    if (selectedRole === 'admin') {
+      setEmail('usiel@restaurantemestizo.com');
+      setPassword('Mestizo2026!');
+      setFullName('Usiel (Administrador)');
+      setRole('admin');
+    } else {
+      setEmail('cajero@restaurantemestizo.com');
+      setPassword('Caja123456');
+      setFullName('Cajero de Turno');
+      setRole('cajero');
     }
   };
 
@@ -243,16 +243,16 @@ export default function LoginView({ onLoginSuccess }) {
             </button>
           </form>
 
-          {/* Quick Access Mode */}
+          {/* Quick Access Helper */}
           <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px dashed var(--sand-border)' }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--dark-subdued)', display: 'block', textAlign: 'center', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Acceso Rápido Directo
+              Autocompletar Credenciales de Muestra
             </span>
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('admin')}
+                onClick={() => handleQuickSelectCredential('admin')}
                 style={{
                   padding: '9px 10px',
                   borderRadius: '8px',
@@ -274,7 +274,7 @@ export default function LoginView({ onLoginSuccess }) {
 
               <button
                 type="button"
-                onClick={() => handleQuickDemoLogin('cajero')}
+                onClick={() => handleQuickSelectCredential('cajero')}
                 style={{
                   padding: '9px 10px',
                   borderRadius: '8px',

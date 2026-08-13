@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut } from 'lucide-react';
+import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Header({
@@ -10,7 +10,8 @@ export default function Header({
   onOpenPrinterSettings,
   onOpenLowStockModal,
   currentUser,
-  onLogout
+  onLogout,
+  onOpenSettings
 }) {
   return (
     <header
@@ -200,25 +201,29 @@ export default function Header({
           </div>
         )}
 
-        <button
-          onClick={onOpenPrinterSettings}
-          title="Configuración de Impresora Térmica"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            border: '1px solid var(--sand-border)',
-            backgroundColor: 'var(--sand-muted)',
-            color: 'var(--dark-subdued)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <Printer size={20} />
-        </button>
+        {onOpenSettings && (
+          <button
+            onClick={onOpenSettings}
+            title="Ajustes y Cambiar Contraseña"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              borderRadius: '10px',
+              border: '1px solid var(--sand-border)',
+              backgroundColor: 'var(--sand-muted)',
+              color: 'var(--dark-text)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Settings size={18} color="var(--terracotta)" />
+            <span>Ajustes</span>
+          </button>
+        )}
 
         {onLogout && (
           <button
@@ -227,18 +232,20 @@ export default function Header({
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              width: '40px',
-              height: '40px',
+              gap: '6px',
+              padding: '8px 14px',
               borderRadius: '10px',
-              border: '1px solid var(--sand-border)',
+              border: '1px solid #FFCDD2',
               backgroundColor: 'var(--danger-bg)',
               color: 'var(--danger)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.2s ease'
             }}
           >
             <LogOut size={18} />
+            <span>Cerrar Sesión</span>
           </button>
         )}
       </div>

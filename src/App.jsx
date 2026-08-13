@@ -8,6 +8,7 @@ import TicketModal from './components/TicketModal';
 import PrinterSettingsModal from './components/PrinterSettingsModal';
 import LowStockModal from './components/LowStockModal';
 import LoginView from './components/LoginView';
+import SettingsModal from './components/SettingsModal';
 
 import {
   initStorage,
@@ -48,6 +49,7 @@ export default function App() {
   const [ticketSale, setTicketSale] = useState(null);
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
   const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     initStorage().then(() => {
@@ -286,6 +288,7 @@ export default function App() {
         onOpenLowStockModal={() => setShowLowStockModal(true)}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onOpenSettings={() => setShowSettingsModal(true)}
       />
 
       {/* Main Tab Content */}
@@ -360,6 +363,16 @@ export default function App() {
           products={insumos}
           onClose={() => setShowLowStockModal(false)}
           onGoToInventory={() => setActiveTab('inventory')}
+        />
+      )}
+
+      {showSettingsModal && (
+        <SettingsModal
+          currentUser={currentUser}
+          printerSettings={printerSettings}
+          onSavePrinterSettings={handleSavePrinterSettings}
+          onLogout={handleLogout}
+          onClose={() => setShowSettingsModal(false)}
         />
       )}
 
