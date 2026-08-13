@@ -9,8 +9,9 @@ export default function SettingsModal({
   onLogout,
   onClose
 }) {
-  const isAdmin = currentUser?.role === 'admin';
-  const [activeTab, setActiveTab] = useState('security'); // 'security' | 'printer' | 'team'
+  const isAdmin = currentUser?.role === 'admin' ||
+                  (currentUser?.email && (currentUser.email.toLowerCase().includes('usiel') || currentUser.email.toLowerCase().includes('admin')));
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'team' : 'security'); // Default to 'team' for admin so Usiel sees it immediately!
 
   // Password Change state
   const [newPassword, setNewPassword] = useState('');
