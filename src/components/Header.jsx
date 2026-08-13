@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck } from 'lucide-react';
+import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Header({
@@ -8,7 +8,9 @@ export default function Header({
   currentShift,
   lowStockCount,
   onOpenPrinterSettings,
-  onOpenLowStockModal
+  onOpenLowStockModal,
+  currentUser,
+  onLogout
 }) {
   return (
     <header
@@ -169,6 +171,35 @@ export default function Header({
           )}
         </div>
 
+        {currentUser && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: 'var(--sand-muted)',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            color: 'var(--terracotta)',
+            border: '1px solid var(--sand-border)'
+          }}>
+            <UserCheck size={16} />
+            <span>{currentUser.fullName || currentUser.email}</span>
+            <span style={{
+              backgroundColor: currentUser.role === 'admin' ? 'var(--terracotta)' : 'var(--dark-subdued)',
+              color: '#FFF',
+              fontSize: '0.68rem',
+              padding: '1px 6px',
+              borderRadius: '8px',
+              marginLeft: '4px',
+              textTransform: 'uppercase'
+            }}>
+              {currentUser.role || 'Cajero'}
+            </span>
+          </div>
+        )}
+
         <button
           onClick={onOpenPrinterSettings}
           title="Configuración de Impresora Térmica"
@@ -188,6 +219,28 @@ export default function Header({
         >
           <Printer size={20} />
         </button>
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            title="Cerrar Sesión Segura"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              border: '1px solid var(--sand-border)',
+              backgroundColor: 'var(--danger-bg)',
+              color: 'var(--danger)',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <LogOut size={18} />
+          </button>
+        )}
       </div>
     </header>
   );

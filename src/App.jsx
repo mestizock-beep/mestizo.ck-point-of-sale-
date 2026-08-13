@@ -7,6 +7,7 @@ import PaymentModal from './components/PaymentModal';
 import TicketModal from './components/TicketModal';
 import PrinterSettingsModal from './components/PrinterSettingsModal';
 import LowStockModal from './components/LowStockModal';
+import LoginView from './components/LoginView';
 
 import {
   initStorage,
@@ -25,9 +26,14 @@ import {
   resetToOfficialMenu
 } from './utils/storage';
 import { INITIAL_CATEGORIES } from './utils/initialData';
+import { supabase, isSupabaseConfigured, signInWithEmail, signUpWithEmail, signOutUser } from './utils/supabaseClient';
+
+const USER_SESSION_KEY = 'mestizo_pos_user_session';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('pos');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   
   // Storage state
   const [products, setProducts] = useState([]);
@@ -44,8 +50,52 @@ export default function App() {
   const [showLowStockModal, setShowLowStockModal] = useState(false);
 
   useEffect(() => {
-    initStorage();
-    refreshAllData();
+    initStorage().then(() => {
+      refreshAllData();
+    });
+
+    // Check stored user session
+    const savedUser = localStorage.getItem(USER_SESSION_KEY);
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem(USER_SESSION_KEY);
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && session.user) {
+          const userMeta = session.user.user_metadata || {};
+          const userObj = {
+            email: session.user.email,
+            fullName: userMeta.fullName || session.user.email.split('@')[0],
+            role: userMeta.role || 'admin'
+          };
+          setCurrentUser(userObj);
+          localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+        }
+        setCheckingAuth(false);
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session && session.user) {
+          const userMeta = session.user.user_metadata || {};
+          const userObj = {
+            email: session.user.email,
+            fullName: userMeta.fullName || session.user.email.split('@')[0],
+            role: userMeta.role || 'admin'
+          };
+          setCurrentUser(userObj);
+          localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+      setCheckingAuth(false);
+    }
   }, []);
 
   const refreshAllData = () => {
@@ -54,6 +104,69 @@ export default function App() {
     setCurrentShift(getCurrentShift());
     setShiftHistory(getShiftHistory());
     setPrinterSettings(getPrinterSettings());
+  };
+
+  // Login Handlers
+  const handleLoginSuccess = async (credentials) => {
+    if (credentials.isDemo) {
+      const userObj = {
+        email: credentials.email,
+        fullName: credentials.fullName,
+        role: credentials.role
+      };
+      setCurrentUser(userObj);
+      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+      return { success: true };
+    }
+
+    if (isSupabaseConfigured) {
+      if (credentials.isSignUp) {
+        const { data, error } = await signUpWithEmail(credentials.email, credentials.password, {
+          fullName: credentials.fullName,
+          role: credentials.role
+        });
+        if (error) return { error: error.message };
+        const userObj = {
+          email: credentials.email,
+          fullName: credentials.fullName,
+          role: credentials.role
+        };
+        setCurrentUser(userObj);
+        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+        return { success: true };
+      } else {
+        const { data, error } = await signInWithEmail(credentials.email, credentials.password);
+        if (error) return { error: error.message };
+        const userMeta = (data && data.user && data.user.user_metadata) || {};
+        const userObj = {
+          email: credentials.email,
+          fullName: userMeta.fullName || credentials.email.split('@')[0],
+          role: userMeta.role || 'admin'
+        };
+        setCurrentUser(userObj);
+        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+        return { success: true };
+      }
+    } else {
+      // Local auth fallback
+      const userObj = {
+        email: credentials.email,
+        fullName: credentials.fullName || credentials.email.split('@')[0],
+        role: credentials.role || 'admin'
+      };
+      setCurrentUser(userObj);
+      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+      return { success: true };
+    }
+  };
+
+  const handleLogout = async () => {
+    if (isSupabaseConfigured) {
+      await signOutUser();
+    }
+    setCurrentUser(null);
+    localStorage.removeItem(USER_SESSION_KEY);
+    setActiveTab('pos');
   };
 
   // Low stock count based on raw insumos
@@ -132,7 +245,7 @@ export default function App() {
 
   // Shift Handlers
   const handleOpenShift = (initialCash, cashierName) => {
-    const shift = openShift(initialCash, cashierName);
+    const shift = openShift(initialCash, cashierName || (currentUser ? currentUser.fullName : 'Cajero Turno'));
     setCurrentShift(shift);
   };
 
@@ -148,6 +261,18 @@ export default function App() {
     setPrinterSettings(newSettings);
   };
 
+  if (checkingAuth) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--sand-bg)' }}>
+        <p style={{ fontWeight: 600, color: 'var(--terracotta)' }}>Verificando sesión segura de Mestizo POS...</p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
@@ -159,6 +284,8 @@ export default function App() {
         lowStockCount={lowStockCount}
         onOpenPrinterSettings={() => setShowPrinterSettings(true)}
         onOpenLowStockModal={() => setShowLowStockModal(true)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Tab Content */}
