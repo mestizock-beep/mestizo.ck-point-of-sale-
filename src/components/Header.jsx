@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings } from 'lucide-react';
+import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Header({
@@ -66,7 +66,76 @@ export default function Header({
           }}
         >
           <ShoppingBag size={18} />
-          <span>Punto de Venta</span>
+          <span>Venta Rápida</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('tables')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '9px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+            backgroundColor: activeTab === 'tables' ? 'var(--terracotta)' : 'transparent',
+            color: activeTab === 'tables' ? '#FFFFFF' : 'var(--dark-subdued)',
+            boxShadow: activeTab === 'tables' ? 'var(--shadow-sm)' : 'none'
+          }}
+        >
+          <Utensils size={18} />
+          <span>Mesas (20)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('kitchen')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '9px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+            backgroundColor: activeTab === 'kitchen' ? 'var(--terracotta)' : 'transparent',
+            color: activeTab === 'kitchen' ? '#FFFFFF' : 'var(--dark-subdued)',
+            boxShadow: activeTab === 'kitchen' ? 'var(--shadow-sm)' : 'none'
+          }}
+        >
+          <Flame size={18} />
+          <span>Cocina KDS</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('bar')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '9px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+            backgroundColor: activeTab === 'bar' ? 'var(--terracotta)' : 'transparent',
+            color: activeTab === 'bar' ? '#FFFFFF' : 'var(--dark-subdued)',
+            boxShadow: activeTab === 'bar' ? 'var(--shadow-sm)' : 'none'
+          }}
+        >
+          <Wine size={18} />
+          <span>Barra BDS</span>
         </button>
 
         <button

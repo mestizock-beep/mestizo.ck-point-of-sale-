@@ -7,8 +7,22 @@ const KEYS = {
   SALES: 'mestizo_pos_sales',
   CURRENT_SHIFT: 'mestizo_pos_current_shift',
   SHIFT_HISTORY: 'mestizo_pos_shift_history',
-  PRINTER: 'mestizo_pos_printer_settings'
+  PRINTER: 'mestizo_pos_printer_settings',
+  TABLE_ORDERS: 'mestizo_pos_table_orders',
+  KITCHEN_TICKETS: 'mestizo_pos_kitchen_tickets'
 };
+
+const INITIAL_TABLES = Array.from({ length: 20 }, (_, i) => ({
+  id: i + 1,
+  tableNumber: i + 1,
+  name: `Mesa ${i + 1}`,
+  status: 'free', // 'free' | 'occupied' | 'checkout'
+  waiterName: '',
+  items: [],
+  notes: '',
+  createdAt: null,
+  updatedAt: null
+}));
 
 const getStorageItem = (key, fallback) => {
   try {
@@ -41,6 +55,12 @@ export const initStorage = async () => {
   }
   if (!localStorage.getItem(KEYS.SHIFT_HISTORY)) {
     setStorageItem(KEYS.SHIFT_HISTORY, []);
+  }
+  if (!localStorage.getItem(KEYS.TABLE_ORDERS)) {
+    setStorageItem(KEYS.TABLE_ORDERS, INITIAL_TABLES);
+  }
+  if (!localStorage.getItem(KEYS.KITCHEN_TICKETS)) {
+    setStorageItem(KEYS.KITCHEN_TICKETS, []);
   }
 
   // If Supabase is configured, pull initial cloud data
@@ -408,3 +428,67 @@ export const savePrinterSettings = (settings) => {
     }]).catch(console.error);
   }
 };
+
+// --- TABLE & KITCHEN / BAR TICKET HELPERS ---
+
+export const getTableOrders = () => {
+  return getStorageItem(KEYS.TABLE_ORDERS, INITIAL_TABLES);
+};
+
+export const saveTableOrders = (tables) => {
+  setStorageItem(KEYS.TABLE_ORDERS, tables);
+};
+
+export const getKitchenTickets = () => {
+  return getStorageItem(KEYS.KITCHEN_TICKETS, []);
+};
+
+export const saveKitchenTickets = (tickets) => {
+  setStorageItem(KEYS.KITCHEN_TICKETS, tickets);
+};
+
+export const sendOrderToKitchenAndBar = (tableNumber, waiterName, itemsToDispatch, tableNotes = '') => {
+  const currentTickets = getKitchenTickets();
+  const timestamp = new Date().toISOString();
+
+  // Separate kitchen items (food) vs bar items (drinks, cocktails, beers)
+  const isDrinkCategory = (category = '') => {
+    const cat = category.toLowerCase();
+    return cat.includes('miche') || cat.includes('coctel') || cat.includes('chela') || cat.includes('cerveza') || cat.includes('bebida') || cat.includes('trago') || cat.includes('refresco');
+  };
+
+  const kitchenItems = itemsToDispatch.filter(item => !isDrinkCategory(item.category));
+  const barItems = itemsToDispatch.filter(item => isDrinkCategory(item.category));
+
+  const newTickets = [...currentTickets];
+
+  if (kitchenItems.length > 0) {
+    newTickets.unshift({
+      id: `ticket_k_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      type: 'kitchen',
+      tableNumber,
+      waiterName,
+      items: kitchenItems.map(i => ({ ...i, isDone: false })),
+      notes: tableNotes,
+      status: 'pending',
+      createdAt: timestamp
+    });
+  }
+
+  if (barItems.length > 0) {
+    newTickets.unshift({
+      id: `ticket_b_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      type: 'bar',
+      tableNumber,
+      waiterName,
+      items: barItems.map(i => ({ ...i, isDone: false })),
+      notes: tableNotes,
+      status: 'pending',
+      createdAt: timestamp
+    });
+  }
+
+  saveKitchenTickets(newTickets);
+  return newTickets;
+};
+

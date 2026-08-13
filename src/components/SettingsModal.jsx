@@ -33,6 +33,8 @@ export default function SettingsModal({
       const stored = localStorage.getItem('mestizo_pos_team_users');
       return stored ? JSON.parse(stored) : [
         { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Chi (Dueño)', password: 'Mestizo2026!', role: 'admin' },
+        { email: 'fer@restaurantemestizo.com', fullName: 'Fer Segura', password: 'FerSegura123@', role: 'cajero' },
+        { email: 'kaleb@restaurantemestizo.com', fullName: 'Kaleb (Mesero)', password: 'KalebMestizo123@', role: 'mesero' },
         { email: 'roberto@restaurantemestizo.com', fullName: 'Roberto Chi', password: 'RobertoChi123@', role: 'cajero' },
         { email: 'cajero@restaurantemestizo.com', fullName: 'Cajero de Turno', password: 'Caja123456', role: 'cajero' }
       ];
@@ -538,8 +540,11 @@ export default function SettingsModal({
                     onChange={(e) => setNewUserRole(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--sand-border)', fontSize: '0.9rem', backgroundColor: '#FFF', fontWeight: 700 }}
                   >
-                    <option value="cajero">Cajero (Solo cobrar y turno)</option>
-                    <option value="admin">Administrador (Acceso Total)</option>
+                    <option value="cajero">Cajero / Encargado de Caja (Fer Segura / Operador)</option>
+                    <option value="mesero">Mesero (Fer Segura, Kaleb - Toma de Comandas en Mesas)</option>
+                    <option value="cocina">Cocina (Cocinero - Pantalla KDS)</option>
+                    <option value="barra">Barra (Bartender - Pantalla BDS)</option>
+                    <option value="admin">Administrador (Usiel Chi - Acceso Total)</option>
                   </select>
                 </div>
 

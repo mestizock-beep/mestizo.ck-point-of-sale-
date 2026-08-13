@@ -3,6 +3,9 @@ import Header from './components/Header';
 import POSView from './components/POSView';
 import InventoryView from './components/InventoryView';
 import CorteCajaView from './components/CorteCajaView';
+import TableManagementView from './components/TableManagementView';
+import KitchenDisplayView from './components/KitchenDisplayView';
+import BarDisplayView from './components/BarDisplayView';
 import PaymentModal from './components/PaymentModal';
 import TicketModal from './components/TicketModal';
 import PrinterSettingsModal from './components/PrinterSettingsModal';
@@ -24,7 +27,9 @@ import {
   getShiftHistory,
   getPrinterSettings,
   savePrinterSettings,
-  resetToOfficialMenu
+  resetToOfficialMenu,
+  getTableOrders,
+  saveTableOrders
 } from './utils/storage';
 import { INITIAL_CATEGORIES } from './utils/initialData';
 import { supabase, isSupabaseConfigured, signInWithEmail, signUpWithEmail, signOutUser } from './utils/supabaseClient';
@@ -40,6 +45,7 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [insumos, setInsumos] = useState([]);
   const [cart, setCart] = useState([]);
+  const [tables, setTables] = useState([]);
   const [currentShift, setCurrentShift] = useState(null);
   const [shiftHistory, setShiftHistory] = useState([]);
   const [printerSettings, setPrinterSettings] = useState({});
@@ -103,9 +109,15 @@ export default function App() {
   const refreshAllData = () => {
     setProducts(getProducts());
     setInsumos(getInsumos());
+    setTables(getTableOrders());
     setCurrentShift(getCurrentShift());
     setShiftHistory(getShiftHistory());
     setPrinterSettings(getPrinterSettings());
+  };
+
+  const handleSaveTables = (newTables) => {
+    setTables(newTables);
+    saveTableOrders(newTables);
   };
 
   const handleLoginSuccess = async (credentials) => {
@@ -329,6 +341,28 @@ export default function App() {
             currentShift={currentShift}
             currentUser={currentUser}
           />
+        )}
+
+        {activeTab === 'tables' && (
+          <TableManagementView
+            tables={tables}
+            setTables={handleSaveTables}
+            products={products}
+            categories={INITIAL_CATEGORIES}
+            currentUser={currentUser}
+            onSendToCheckout={(orderData) => {
+              setCheckoutOrder(orderData);
+              setActiveTab('pos');
+            }}
+          />
+        )}
+
+        {activeTab === 'kitchen' && (
+          <KitchenDisplayView />
+        )}
+
+        {activeTab === 'bar' && (
+          <BarDisplayView />
         )}
 
         {activeTab === 'inventory' && (
