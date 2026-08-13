@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../utils/supabaseClient';
+import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck } from 'lucide-react';
+import { supabase, isSupabaseConfigured, signUpWithEmail } from '../utils/supabaseClient';
 
 export default function SettingsModal({
   currentUser,
@@ -9,10 +9,10 @@ export default function SettingsModal({
   onLogout,
   onClose
 }) {
-  const [activeTab, setActiveTab] = useState('security'); // 'security' | 'printer'
+  const isAdmin = currentUser?.role === 'admin';
+  const [activeTab, setActiveTab] = useState('security'); // 'security' | 'printer' | 'team'
 
   // Password Change state
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState(null); // { type: 'success'|'error', text: '' }
@@ -25,6 +25,26 @@ export default function SettingsModal({
   const [footerMessage, setFooterMessage] = useState(printerSettings.footerMessage || '¡Gracias por tu visita! Vuelve pronto.');
   const [autoPrint, setAutoPrint] = useState(Boolean(printerSettings.autoPrint));
   const [printerSuccess, setPrinterSuccess] = useState(false);
+
+  // Team Users state (Admin Only)
+  const [teamUsers, setTeamUsers] = useState(() => {
+    try {
+      const stored = localStorage.getItem('mestizo_pos_team_users');
+      return stored ? JSON.parse(stored) : [
+        { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Morales (Dueño)', role: 'admin' },
+        { email: 'cajero@restaurantemestizo.com', fullName: 'Cajero de Turno', role: 'cajero' }
+      ];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserRole, setNewUserRole] = useState('cajero');
+  const [teamStatus, setTeamStatus] = useState(null);
+  const [teamLoading, setTeamLoading] = useState(false);
 
   const handleChangePasswordSubmit = async (e) => {
     e.preventDefault();
@@ -47,14 +67,12 @@ export default function SettingsModal({
         const { error } = await supabase.auth.updateUser({ password: newPassword });
         if (error) throw error;
       } else {
-        // Save local password update
         const storedUser = JSON.parse(localStorage.getItem('mestizo_pos_user_session') || '{}');
         storedUser.password = newPassword;
         localStorage.setItem('mestizo_pos_user_session', JSON.stringify(storedUser));
       }
 
       setPasswordStatus({ type: 'success', text: '¡Contraseña actualizada correctamente!' });
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
@@ -77,6 +95,75 @@ export default function SettingsModal({
     setTimeout(() => setPrinterSuccess(false), 3000);
   };
 
+  const handleCreateUserSubmit = async (e) => {
+    e.preventDefault();
+    setTeamStatus(null);
+
+    if (!isAdmin) {
+      setTeamStatus({ type: 'error', text: 'Solo el Administrador (Usiel) puede crear nuevos usuarios.' });
+      return;
+    }
+
+    if (newUserPassword.length < 6) {
+      setTeamStatus({ type: 'error', text: 'La contraseña asignada debe tener al menos 6 caracteres.' });
+      return;
+    }
+
+    const existing = teamUsers.find(u => u.email.toLowerCase() === newUserEmail.toLowerCase());
+    if (existing) {
+      setTeamStatus({ type: 'error', text: 'Ya existe un usuario registrado con este correo.' });
+      return;
+    }
+
+    setTeamLoading(true);
+
+    try {
+      if (isSupabaseConfigured) {
+        const { error } = await signUpWithEmail(newUserEmail, newUserPassword, {
+          fullName: newUserName,
+          role: newUserRole
+        });
+        if (error && !error.message.includes('API key')) {
+          throw error;
+        }
+      }
+
+      const newUserObj = {
+        email: newUserEmail,
+        fullName: newUserName || newUserEmail.split('@')[0],
+        password: newUserPassword,
+        role: newUserRole
+      };
+
+      const updatedList = [newUserObj, ...teamUsers];
+      setTeamUsers(updatedList);
+      localStorage.setItem('mestizo_pos_team_users', JSON.stringify(updatedList));
+
+      setTeamStatus({ type: 'success', text: `¡Usuario "${newUserName || newUserEmail}" creado exitosamente!` });
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserName('');
+      setNewUserRole('cajero');
+    } catch (err) {
+      setTeamStatus({ type: 'error', text: err.message || 'Error al crear usuario.' });
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleDeleteUser = (userEmail) => {
+    if (userEmail.toLowerCase() === currentUser?.email?.toLowerCase()) {
+      alert('No puedes eliminar tu propia cuenta activa.');
+      return;
+    }
+
+    if (confirm(`¿Estás seguro de eliminar el usuario "${userEmail}"? Ya no podrá acceder al sistema.`)) {
+      const updated = teamUsers.filter(u => u.email.toLowerCase() !== userEmail.toLowerCase());
+      setTeamUsers(updated);
+      localStorage.setItem('mestizo_pos_team_users', JSON.stringify(updated));
+    }
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -96,7 +183,7 @@ export default function SettingsModal({
         backgroundColor: '#FFFFFF',
         borderRadius: 'var(--radius-lg)',
         width: '100%',
-        maxWidth: '560px',
+        maxWidth: '580px',
         maxHeight: '90vh',
         boxShadow: 'var(--shadow-lg)',
         border: '1px solid var(--sand-border)',
@@ -118,7 +205,7 @@ export default function SettingsModal({
             <Settings size={22} color="var(--terracotta)" />
             <div>
               <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--dark-text)' }}>Ajustes & Configuración</h2>
-              <span style={{ fontSize: '0.78rem', color: 'var(--dark-subdued)' }}>Seguridad, perfil y tickets de impresión</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--dark-subdued)' }}>Seguridad, personal y tickets de impresión</span>
             </div>
           </div>
 
@@ -146,40 +233,64 @@ export default function SettingsModal({
             onClick={() => setActiveTab('security')}
             style={{
               flex: 1,
-              padding: '12px',
+              padding: '12px 8px',
               border: 'none',
               borderBottom: activeTab === 'security' ? '3px solid var(--terracotta)' : '3px solid transparent',
               backgroundColor: activeTab === 'security' ? '#FFF' : 'transparent',
               color: activeTab === 'security' ? 'var(--terracotta)' : 'var(--dark-subdued)',
-              fontSize: '0.88rem',
+              fontSize: '0.85rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '6px'
             }}
           >
             <Shield size={16} />
             <span>Perfil & Seguridad</span>
           </button>
 
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('team')}
+              style={{
+                flex: 1,
+                padding: '12px 8px',
+                border: 'none',
+                borderBottom: activeTab === 'team' ? '3px solid var(--terracotta)' : '3px solid transparent',
+                backgroundColor: activeTab === 'team' ? '#FFF' : 'transparent',
+                color: activeTab === 'team' ? 'var(--terracotta)' : 'var(--dark-subdued)',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <Users size={16} />
+              <span>Gestión de Personal</span>
+            </button>
+          )}
+
           <button
             onClick={() => setActiveTab('printer')}
             style={{
               flex: 1,
-              padding: '12px',
+              padding: '12px 8px',
               border: 'none',
               borderBottom: activeTab === 'printer' ? '3px solid var(--terracotta)' : '3px solid transparent',
               backgroundColor: activeTab === 'printer' ? '#FFF' : 'transparent',
               color: activeTab === 'printer' ? 'var(--terracotta)' : 'var(--dark-subdued)',
-              fontSize: '0.88rem',
+              fontSize: '0.85rem',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '6px'
             }}
           >
             <Printer size={16} />
@@ -342,6 +453,181 @@ export default function SettingsModal({
                   <span>{passwordLoading ? 'Guardando...' : 'Guardar Nueva Contraseña'}</span>
                 </button>
               </form>
+
+            </div>
+          )}
+
+          {activeTab === 'team' && isAdmin && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              <form onSubmit={handleCreateUserSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', backgroundColor: 'var(--sand-bg)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--sand-border)' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--dark-text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <UserPlus size={18} color="var(--terracotta)" />
+                  <span>Crear Nuevo Usuario / Asignar Cajero</span>
+                </h4>
+
+                {teamStatus && (
+                  <div style={{
+                    backgroundColor: teamStatus.type === 'success' ? 'var(--success-bg)' : 'var(--danger-bg)',
+                    color: teamStatus.type === 'success' ? 'var(--success)' : 'var(--danger)',
+                    border: `1px solid ${teamStatus.type === 'success' ? '#C8E6C9' : '#FFCDD2'}`,
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {teamStatus.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                    <span>{teamStatus.text}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '4px' }}>
+                    Nombre del Colaborador
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: Usiel Morales / Pedro Cajero"
+                    value={newUserName}
+                    onChange={(e) => setNewUserName(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--sand-border)', fontSize: '0.9rem', backgroundColor: '#FFF' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '4px' }}>
+                    Correo Electrónico de Ingreso
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="cajero1@restaurantemestizo.com"
+                    value={newUserEmail}
+                    onChange={(e) => setNewUserEmail(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--sand-border)', fontSize: '0.9rem', backgroundColor: '#FFF' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '4px' }}>
+                    Contraseña Asignada
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="Mínimo 6 caracteres"
+                    value={newUserPassword}
+                    onChange={(e) => setNewUserPassword(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--sand-border)', fontSize: '0.9rem', backgroundColor: '#FFF' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '4px' }}>
+                    Rol Asignado
+                  </label>
+                  <select
+                    value={newUserRole}
+                    onChange={(e) => setNewUserRole(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--sand-border)', fontSize: '0.9rem', backgroundColor: '#FFF', fontWeight: 700 }}
+                  >
+                    <option value="cajero">Cajero (Solo cobrar y turno)</option>
+                    <option value="admin">Administrador (Acceso Total)</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={teamLoading}
+                  style={{
+                    backgroundColor: 'var(--terracotta)',
+                    color: '#FFF',
+                    border: 'none',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    alignSelf: 'flex-start',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '0.25rem'
+                  }}
+                >
+                  <UserPlus size={16} />
+                  <span>{teamLoading ? 'Creando...' : 'Crear Usuario'}</span>
+                </button>
+              </form>
+
+              <div>
+                <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--dark-text)', marginBottom: '0.75rem' }}>
+                  Personal Registrado ({teamUsers.length})
+                </h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {teamUsers.map(user => (
+                    <div
+                      key={user.email}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--sand-border)',
+                        backgroundColor: '#FFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{user.fullName || user.email}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--dark-subdued)' }}>{user.email}</div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                          backgroundColor: user.role === 'admin' ? 'var(--terracotta)' : 'var(--dark-subdued)',
+                          color: '#FFF',
+                          fontSize: '0.7rem',
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}>
+                          {user.role === 'admin' ? 'Admin' : 'Cajero'}
+                        </span>
+
+                        {user.email.toLowerCase() !== currentUser?.email?.toLowerCase() && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(user.email)}
+                            title="Eliminar usuario"
+                            style={{
+                              backgroundColor: 'var(--danger-bg)',
+                              color: 'var(--danger)',
+                              border: 'none',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
             </div>
           )}

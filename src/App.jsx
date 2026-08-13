@@ -117,73 +117,61 @@ export default function App() {
       return { error: 'La contraseña debe tener al menos 6 caracteres.' };
     }
 
+    // Check registered team users list
+    let registeredTeam = [];
+    try {
+      const stored = localStorage.getItem('mestizo_pos_team_users');
+      if (stored) registeredTeam = JSON.parse(stored);
+    } catch (e) {}
+
+    const matchedUser = registeredTeam.find(u => u.email.toLowerCase() === credentials.email.toLowerCase());
+
     if (isSupabaseConfigured) {
       try {
-        if (credentials.isSignUp) {
-          const { data, error } = await signUpWithEmail(credentials.email, credentials.password, {
-            fullName: credentials.fullName,
-            role: credentials.role
-          });
-
-          if (error) {
-            if (error.message && error.message.toLowerCase().includes('api key')) {
-              // Local secure user session
-              const userObj = {
-                email: credentials.email,
-                fullName: credentials.fullName || credentials.email.split('@')[0],
-                role: credentials.role || 'admin'
-              };
-              setCurrentUser(userObj);
-              localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-              return { success: true };
+        const { data, error } = await signInWithEmail(credentials.email, credentials.password);
+        
+        if (error) {
+          if (error.message && error.message.toLowerCase().includes('api key')) {
+            // Local check if password matches matchedUser or admin default
+            if (matchedUser && matchedUser.password && matchedUser.password !== credentials.password) {
+              return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' };
             }
-            return { error: error.message };
+            const userRole = matchedUser ? matchedUser.role : (credentials.email.includes('admin') || credentials.email.includes('usiel') ? 'admin' : 'cajero');
+            const userObj = {
+              email: credentials.email,
+              fullName: matchedUser ? matchedUser.fullName : credentials.email.split('@')[0],
+              role: userRole
+            };
+            setCurrentUser(userObj);
+            localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+            return { success: true };
           }
-
-          const userObj = {
-            email: credentials.email,
-            fullName: credentials.fullName,
-            role: credentials.role
-          };
-          setCurrentUser(userObj);
-          localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-          return { success: true };
-        } else {
-          const { data, error } = await signInWithEmail(credentials.email, credentials.password);
-          
-          if (error) {
-            if (error.message && error.message.toLowerCase().includes('api key')) {
-              const userObj = {
-                email: credentials.email,
-                fullName: credentials.fullName || credentials.email.split('@')[0],
-                role: credentials.role || 'admin'
-              };
-              setCurrentUser(userObj);
-              localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-              return { success: true };
-            }
-            return { error: error.message || 'Credenciales incorrectas. Verifica tu contraseña.' };
-          }
-
-          const userMeta = (data && data.user && data.user.user_metadata) || {};
-          const userObj = {
-            email: credentials.email,
-            fullName: userMeta.fullName || credentials.email.split('@')[0],
-            role: userMeta.role || 'admin'
-          };
-          setCurrentUser(userObj);
-          localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-          return { success: true };
+          return { error: error.message || 'Credenciales incorrectas. Verifica tu contraseña.' };
         }
+
+        const userMeta = (data && data.user && data.user.user_metadata) || {};
+        const userObj = {
+          email: credentials.email,
+          fullName: matchedUser ? matchedUser.fullName : (userMeta.fullName || credentials.email.split('@')[0]),
+          role: matchedUser ? matchedUser.role : (userMeta.role || 'admin')
+        };
+        setCurrentUser(userObj);
+        localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+        return { success: true };
       } catch (err) {
         return { error: err.message || 'Error de conexión al verificar credenciales.' };
       }
     } else {
-      // Local auth fallback
+      // Local auth validation
+      if (matchedUser && matchedUser.password && matchedUser.password !== credentials.password) {
+        return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' };
+      }
+
+      const userRole = matchedUser ? matchedUser.role : (credentials.email.includes('admin') || credentials.email.includes('usiel') ? 'admin' : 'cajero');
       const userObj = {
         email: credentials.email,
-        fullName: credentials.fullName || credentials.email.split('@')[0],
-        role: credentials.role || 'admin'
+        fullName: matchedUser ? matchedUser.fullName : credentials.email.split('@')[0],
+        role: userRole
       };
       setCurrentUser(userObj);
       localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));

@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { Lock, Mail, User, ShieldCheck, ArrowRight, AlertCircle, KeyRound, Store } from 'lucide-react';
+import { Lock, Mail, ArrowRight, AlertCircle, ShieldAlert } from 'lucide-react';
 import Logo from './Logo';
 
 export default function LoginView({ onLoginSuccess }) {
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('cajero'); // 'admin' | 'cajero'
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,11 +22,8 @@ export default function LoginView({ onLoginSuccess }) {
     try {
       if (onLoginSuccess) {
         const result = await onLoginSuccess({
-          isSignUp,
           email,
-          password,
-          fullName: fullName || (email.split('@')[0]),
-          role
+          password
         });
 
         if (result && result.error) {
@@ -57,7 +51,7 @@ export default function LoginView({ onLoginSuccess }) {
     }}>
       <div className="animate-fade-in" style={{
         width: '100%',
-        maxWidth: '440px',
+        maxWidth: '420px',
         backgroundColor: '#FFFFFF',
         borderRadius: 'var(--radius-lg)',
         boxShadow: 'var(--shadow-lg)',
@@ -105,32 +99,6 @@ export default function LoginView({ onLoginSuccess }) {
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
             
-            {isSignUp && (
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '6px' }}>
-                  Nombre Completo
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <User size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--dark-subdued)' }} />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. Usiel Morales"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px 10px 38px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--sand-border)',
-                      fontSize: '0.92rem',
-                      outline: 'none'
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
             <div>
               <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '6px' }}>
                 Correo Electrónico
@@ -179,30 +147,6 @@ export default function LoginView({ onLoginSuccess }) {
               </div>
             </div>
 
-            {isSignUp && (
-              <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '6px' }}>
-                  Rol de Usuario
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--sand-border)',
-                    fontSize: '0.92rem',
-                    backgroundColor: '#FFF',
-                    fontWeight: 600
-                  }}
-                >
-                  <option value="cajero">Cajero / Operador de Caja</option>
-                  <option value="admin">Administrador (Acceso Total)</option>
-                </select>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={loading}
@@ -224,30 +168,29 @@ export default function LoginView({ onLoginSuccess }) {
                 transition: 'background-color 0.2s ease'
               }}
             >
-              <span>{loading ? 'Ingresando...' : isSignUp ? 'Crear Cuenta' : 'Iniciar Sesión'}</span>
+              <span>{loading ? 'Verificando...' : 'Iniciar Sesión'}</span>
               <ArrowRight size={18} />
             </button>
           </form>
 
-          <div style={{ marginTop: '1.25rem', textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setErrorMessage('');
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--terracotta)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textDecoration: 'underline'
-              }}
-            >
-              {isSignUp ? '¿Ya tienes cuenta? Inicia sesión aquí' : '¿Nuevo colaborador? Registrar usuario'}
-            </button>
+          {/* Security note */}
+          <div style={{
+            marginTop: '1.5rem',
+            padding: '12px',
+            backgroundColor: 'var(--sand-bg)',
+            borderRadius: '8px',
+            border: '1px solid var(--sand-border)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '8px',
+            fontSize: '0.78rem',
+            color: 'var(--dark-subdued)',
+            lineHeight: 1.4
+          }}>
+            <ShieldAlert size={18} style={{ color: 'var(--terracotta)', flexShrink: 0, marginTop: '2px' }} />
+            <span>
+              <strong>Acceso Restringido:</strong> Por seguridad, las cuentas de personal deben ser creadas y asignadas directamente por el <strong>Administrador (Usiel)</strong> desde el panel de Ajustes.
+            </span>
           </div>
 
         </div>
