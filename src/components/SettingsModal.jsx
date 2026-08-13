@@ -32,7 +32,7 @@ export default function SettingsModal({
     try {
       const stored = localStorage.getItem('mestizo_pos_team_users');
       return stored ? JSON.parse(stored) : [
-        { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Morales (Dueño)', password: 'Mestizo2026!', role: 'admin' },
+        { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Chi (Dueño)', password: 'Mestizo2026!', role: 'admin' },
         { email: 'roberto@restaurantemestizo.com', fullName: 'Roberto Chi', password: 'RobertoChi123@', role: 'cajero' },
         { email: 'cajero@restaurantemestizo.com', fullName: 'Cajero de Turno', password: 'Caja123456', role: 'cajero' }
       ];

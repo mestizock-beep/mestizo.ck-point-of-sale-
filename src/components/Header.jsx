@@ -178,7 +178,7 @@ export default function Header({
             }}
           />
           {currentShift && currentShift.isOpen ? (
-            <span>Caja Abierta (${currentShift.initialCash.toFixed(0)})</span>
+            <span>Caja Abierta por {currentShift.cashierName || 'Usiel'} (${currentShift.initialCash.toFixed(0)})</span>
           ) : (
             <span>Caja Cerrada</span>
           )}

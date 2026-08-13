@@ -119,7 +119,7 @@ export default function App() {
 
     // Check registered team users list
     let registeredTeam = [
-      { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Morales (Dueño)', password: 'Mestizo2026!', role: 'admin' },
+      { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Chi (Dueño)', password: 'Mestizo2026!', role: 'admin' },
       { email: 'roberto@restaurantemestizo.com', fullName: 'Roberto Chi', password: 'RobertoChi123@', role: 'cajero' },
       { email: 'cajero@restaurantemestizo.com', fullName: 'Cajero de Turno', password: 'Caja123456', role: 'cajero' }
     ];
@@ -327,6 +327,7 @@ export default function App() {
             setCart={setCart}
             onOpenCheckout={handleOpenCheckout}
             currentShift={currentShift}
+            currentUser={currentUser}
           />
         )}
 

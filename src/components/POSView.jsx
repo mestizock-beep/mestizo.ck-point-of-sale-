@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle, ArrowRight, Lock, ShieldAlert, X } from 'lucide-react';
 
 export default function POSView({
   products,
@@ -7,7 +7,8 @@ export default function POSView({
   cart,
   setCart,
   onOpenCheckout,
-  currentShift
+  currentShift,
+  currentUser
 }) {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,6 +16,7 @@ export default function POSView({
   const [tipPercent, setTipPercent] = useState(10);
   const [itemNoteModal, setItemNoteModal] = useState(null);
   const [noteInput, setNoteInput] = useState('');
+  const [shiftLockError, setShiftLockError] = useState(null);
   
   const [mobileTab, setMobileTab] = useState('menu'); // 'menu' | 'cart'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
@@ -84,8 +86,38 @@ export default function POSView({
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const discountAmount = (subtotal * discountPercent) / 100;
   const subtotalWithDiscount = Math.max(0, subtotal - discountAmount);
-  const tipAmount = (subtotalWithDiscount * tipPercent) / 100;
-  const total = subtotalWithDiscount + tipAmount;
+  const handleAttemptCheckout = () => {
+    if (!currentShift || !currentShift.isOpen) {
+      alert('Atención: La caja no está abierta actualmente. Debes abrir el turno en "Corte de Caja" para cobrar.');
+      return;
+    }
+
+    const shiftOwner = currentShift.cashierName || 'Usiel Chi';
+    const currentName = currentUser ? (currentUser.fullName || currentUser.email) : '';
+    
+    // Admin or shift opener matches currentUser
+    const isOwner = currentUser && (
+      currentUser.role === 'admin' ||
+      (currentName && shiftOwner.toLowerCase().includes(currentName.toLowerCase())) ||
+      (currentName && currentName.toLowerCase().includes(shiftOwner.toLowerCase())) ||
+      (currentUser.email && currentUser.email.toLowerCase().includes('usiel'))
+    );
+
+    if (!isOwner) {
+      setShiftLockError(`🔒 Control de Caja: Este turno fue abierto por "${shiftOwner}". Únicamente ${shiftOwner} o el Administrador pueden autorizar y registrar cobros en efectivo/tarjeta.`);
+      return;
+    }
+
+    onOpenCheckout({
+      cart,
+      subtotal,
+      discountPercent,
+      discountAmount,
+      tipPercent,
+      tipAmount,
+      total
+    });
+  };
 
   return (
     <div style={{
@@ -602,15 +634,7 @@ export default function POSView({
             </div>
 
             <button
-              onClick={() => onOpenCheckout({
-                cart,
-                subtotal,
-                discountPercent,
-                discountAmount,
-                tipPercent,
-                tipAmount,
-                total
-              })}
+              onClick={handleAttemptCheckout}
               style={{
                 width: '100%',
                 backgroundColor: 'var(--terracotta)',
@@ -737,6 +761,77 @@ export default function POSView({
                 Guardar Nota
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {shiftLockError && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 300,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div className="animate-fade-in" style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+            maxWidth: '440px',
+            width: '100%',
+            boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--sand-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--terracotta)' }}>
+              <Lock size={26} />
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Cobro Restringido por Control de Caja</h3>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: 'var(--dark-text)', lineHeight: 1.5 }}>
+              {shiftLockError}
+            </p>
+
+            <div style={{
+              backgroundColor: 'var(--sand-muted)',
+              padding: '10px 12px',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              color: 'var(--dark-subdued)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <ShieldAlert size={16} color="var(--terracotta)" />
+              <span>Esta medida protege el cuadre de efectivo y evita discrepancias en el arqueo de caja.</span>
+            </div>
+
+            <button
+              onClick={() => setShiftLockError(null)}
+              style={{
+                marginTop: '0.5rem',
+                backgroundColor: 'var(--terracotta)',
+                color: '#FFF',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                alignSelf: 'flex-end'
+              }}
+            >
+              Entendido
+            </button>
           </div>
         </div>
       )}
