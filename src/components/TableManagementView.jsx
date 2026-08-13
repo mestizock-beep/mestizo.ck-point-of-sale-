@@ -401,80 +401,116 @@ export default function TableManagementView({
             {/* Modal Body: Split view (Left: Product Catalog Picker, Right: Active Table Items) */}
             <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               
-              {/* Left Column: Products Selector */}
-              <div style={{ flex: '1 1 55%', borderRight: '1px solid var(--sand-border)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem', overflowY: 'auto' }}>
+              {/* Left Column: Products Selector (Fixed Header + Scrollable Grid) */}
+              <div style={{
+                flex: '1 1 55%',
+                borderRight: '1px solid var(--sand-border)',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                minHeight: 0,
+                overflow: 'hidden'
+              }}>
                 
-                {/* Search Box */}
-                <div style={{ position: 'relative', width: '100%', flexShrink: 0 }}>
-                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--dark-subdued)' }} />
-                  <input
-                    type="text"
-                    placeholder="Buscar producto o bebida..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '8px', border: '1px solid var(--sand-border)', backgroundColor: 'var(--sand-bg)', fontSize: '0.9rem', outline: 'none' }}
-                  />
-                </div>
-
-                {/* Categories Pills (Always Visible Header Bar) */}
+                {/* Search & Categories Fixed Top Header */}
                 <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  overflowX: 'auto',
-                  padding: '4px 2px 8px 2px',
                   flexShrink: 0,
-                  borderBottom: '1px solid var(--sand-border)',
-                  backgroundColor: '#FFF'
-                }} className="no-scrollbar">
-                  {categories.map(cat => {
-                    const getEmoji = (c) => {
-                      if (c === 'Botanas') return '🍟';
-                      if (c === 'Tacos') return '🌮';
-                      if (c === 'Volcanes') return '🌋';
-                      if (c === 'Tortas') return '🥪';
-                      if (c === 'Especiales') return '⭐';
-                      if (c === 'Cervezas') return '🍺';
-                      if (c === 'Miches') return '🍹';
-                      if (c === 'Cócteles') return '🍸';
-                      if (c === 'Sin Alcohol') return '🥤';
-                      if (c === 'El Último Antojo') return '🍰';
-                      return '🍽️';
-                    };
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                  backgroundColor: 'var(--sand-muted)',
+                  padding: '0.85rem',
+                  borderRadius: '12px',
+                  border: '1px solid var(--sand-border)',
+                  marginBottom: '0.85rem'
+                }}>
+                  {/* Search Box */}
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--dark-subdued)' }} />
+                    <input
+                      type="text"
+                      placeholder="Buscar platillo, bebida o SKU..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px 9px 36px',
+                        borderRadius: '8px',
+                        border: '1px solid var(--sand-border)',
+                        backgroundColor: '#FFFFFF',
+                        fontSize: '0.9rem',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
 
-                    const isSelected = selectedCategory === cat;
+                  {/* Categories Pills Bar */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '6px',
+                    overflowX: 'auto',
+                    paddingBottom: '2px',
+                    alignItems: 'center'
+                  }} className="no-scrollbar">
+                    {categories.map(cat => {
+                      const getEmoji = (c) => {
+                        if (c === 'Botanas') return '🍟';
+                        if (c === 'Tacos') return '🌮';
+                        if (c === 'Volcanes') return '🌋';
+                        if (c === 'Tortas') return '🥪';
+                        if (c === 'Especiales') return '⭐';
+                        if (c === 'Cervezas') return '🍺';
+                        if (c === 'Miches') return '🍹';
+                        if (c === 'Cócteles') return '🍸';
+                        if (c === 'Sin Alcohol') return '🥤';
+                        if (c === 'El Último Antojo') return '🍰';
+                        return '🍽️';
+                      };
 
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setSelectedCategory(cat)}
-                        style={{
-                          padding: '8px 14px',
-                          borderRadius: '20px',
-                          border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
-                          backgroundColor: isSelected ? 'var(--terracotta)' : 'var(--sand-bg)',
-                          color: isSelected ? '#FFFFFF' : 'var(--dark-text)',
-                          fontSize: '0.82rem',
-                          fontWeight: 800,
-                          whiteSpace: 'nowrap',
-                          cursor: 'pointer',
-                          boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          flexShrink: 0,
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <span>{getEmoji(cat)}</span>
-                        <span>{cat}</span>
-                      </button>
-                    );
-                  })}
+                      const isSelected = selectedCategory === cat;
+
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCategory(cat)}
+                          style={{
+                            padding: '6px 13px',
+                            borderRadius: '16px',
+                            border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                            backgroundColor: isSelected ? 'var(--terracotta)' : '#FFFFFF',
+                            color: isSelected ? '#FFFFFF' : 'var(--dark-text)',
+                            fontSize: '0.82rem',
+                            fontWeight: 800,
+                            whiteSpace: 'nowrap',
+                            cursor: 'pointer',
+                            boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <span>{getEmoji(cat)}</span>
+                          <span>{cat}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Product Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                {/* Product Grid (Independent Scroll) */}
+                <div style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+                  gap: '0.75rem',
+                  alignContent: 'start',
+                  paddingRight: '4px'
+                }}>
                   {filteredProducts.map(prod => (
                     <div
                       key={prod.id}
