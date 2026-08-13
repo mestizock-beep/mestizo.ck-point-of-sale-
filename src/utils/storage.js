@@ -492,3 +492,37 @@ export const sendOrderToKitchenAndBar = (tableNumber, waiterName, itemsToDispatc
   return newTickets;
 };
 
+export const sendCancellationNoticeToKitchenAndBar = (tableNumber, waiterName, cancelledItemName, qty, reason = '') => {
+  const currentTickets = getKitchenTickets();
+  const timestamp = new Date().toISOString();
+
+  // Create cancellation notices for both Kitchen and Bar so staff is immediately alerted
+  const cancelKitchenTicket = {
+    id: `cancel_k_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    type: 'kitchen',
+    isCancellationAlert: true,
+    tableNumber,
+    waiterName,
+    items: [{ name: cancelledItemName, quantity: qty, note: `❌ CANCELADO POR MESERO: ${reason || 'Cancelación de orden'}`, isDone: false }],
+    notes: `⚠️ ALERTA: CANCELAR ${qty}x ${cancelledItemName}`,
+    status: 'pending',
+    createdAt: timestamp
+  };
+
+  const cancelBarTicket = {
+    id: `cancel_b_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    type: 'bar',
+    isCancellationAlert: true,
+    tableNumber,
+    waiterName,
+    items: [{ name: cancelledItemName, quantity: qty, note: `❌ CANCELADO POR MESERO: ${reason || 'Cancelación de orden'}`, isDone: false }],
+    notes: `⚠️ ALERTA: CANCELAR ${qty}x ${cancelledItemName}`,
+    status: 'pending',
+    createdAt: timestamp
+  };
+
+  const updatedTickets = [cancelKitchenTicket, cancelBarTicket, ...currentTickets];
+  saveKitchenTickets(updatedTickets);
+  return updatedTickets;
+};
+

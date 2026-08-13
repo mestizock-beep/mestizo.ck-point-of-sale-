@@ -185,12 +185,96 @@ export default function TableManagementView({
     setTimeout(() => setSuccessMessage(''), 3500);
   };
 
+  const handleCancelItem = (itemIndex) => {
+    if (!selectedTable) return;
+    const item = selectedTable.items[itemIndex];
+    if (!item) return;
+
+    const dispatchedQty = item.dispatchedQuantity || 0;
+    const isDispatched = dispatchedQty > 0;
+
+    let reason = '';
+    if (isDispatched) {
+      const userInput = prompt(`⚠️ El producto "${item.name}" ya fue enviado previamente a Cocina / Barra (${dispatchedQty} pzas).\n\nEscribe el motivo de la cancelación para notificar al cocinero/barman:`, 'Cliente cambió de opinión');
+      if (userInput === null) return; // Waiter clicked cancel
+      reason = userInput.trim() || 'Cancelación por cliente';
+
+      // Send cancellation notice ticket to Kitchen & Bar immediately
+      sendCancellationNoticeToKitchenAndBar(
+        selectedTable.tableNumber,
+        selectedTable.waiterName || currentWaiterName,
+        item.name,
+        item.quantity,
+        reason
+      );
+    }
+
+    // Remove item from active table
+    setSelectedTable(prev => {
+      const updated = [...prev.items];
+      updated.splice(itemIndex, 1);
+      const updatedTable = {
+        ...prev,
+        status: updated.length === 0 ? 'free' : prev.status,
+        updatedAt: new Date().toISOString(),
+        items: updated
+      };
+      saveTableOrders(tables.map(t => t.tableNumber === updatedTable.tableNumber ? updatedTable : t));
+      return updatedTable;
+    });
+
+    setSuccessMessage(`❌ Producto "${item.name}" cancelado y removido de la Mesa ${selectedTable.tableNumber}.`);
+    setTimeout(() => setSuccessMessage(''), 3500);
+  };
+
+  const handleCancelEntireTableOrder = () => {
+    if (!selectedTable) return;
+    const hasDispatched = selectedTable.items.some(i => (i.dispatchedQuantity || 0) > 0);
+
+    const confirmMsg = hasDispatched
+      ? `⚠️ ¿CANCELAR Y ANULAR TODA LA MESA ${selectedTable.tableNumber}?\n\nEsta mesa tiene comandas enviadas a Cocina/Barra. Se enviará una ALERTA DE CANCELACIÓN urgente a Cocina y Barra para detener la preparación.`
+      : `¿Estás seguro de cancelar y limpiar toda la Mesa ${selectedTable.tableNumber}?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    if (hasDispatched) {
+      const reason = prompt('Motivo de la cancelación de la mesa completa:', 'Mesa canceló su consumo') || 'Mesa cancelada';
+      selectedTable.items.forEach(item => {
+        if ((item.dispatchedQuantity || 0) > 0) {
+          sendCancellationNoticeToKitchenAndBar(
+            selectedTable.tableNumber,
+            selectedTable.waiterName || currentWaiterName,
+            item.name,
+            item.dispatchedQuantity,
+            reason
+          );
+        }
+      });
+    }
+
+    const resetTable = {
+      tableNumber: selectedTable.tableNumber,
+      status: 'free',
+      waiterName: '',
+      items: [],
+      notes: '',
+      createdAt: null,
+      updatedAt: null
+    };
+
+    const updatedTables = tables.map(t => t.tableNumber === resetTable.tableNumber ? resetTable : t);
+    setTables(updatedTables);
+    setSelectedTable(null);
+    setSuccessMessage(`🚫 Mesa ${resetTable.tableNumber} cancelada y liberada.`);
+    setTimeout(() => setSuccessMessage(''), 3500);
+  };
+
   const handleSendToCheckoutCashier = () => {
     if (!selectedTable || selectedTable.items.length === 0) return;
 
     const subtotal = selectedTable.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Call cashier checkout callback
+    // Call cashier checkout callback (No automatic tip)
     onSendToCheckout({
       tableNumber: selectedTable.tableNumber,
       waiterName: selectedTable.waiterName || currentWaiterName,
@@ -198,9 +282,9 @@ export default function TableManagementView({
       subtotal,
       discountPercent: 0,
       discountAmount: 0,
-      tipPercent: 10,
-      tipAmount: (subtotal * 0.1),
-      total: subtotal * 1.1
+      tipPercent: 0,
+      tipAmount: 0,
+      total: subtotal
     });
 
     // Mark table in checkout status
@@ -619,7 +703,8 @@ export default function TableManagementView({
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto' }}>
                       {selectedTable.items.map((item, idx) => {
-                        const pendingQty = item.quantity - (item.dispatchedQuantity || 0);
+                        const dispatchedQty = item.dispatchedQuantity || 0;
+                        const pendingQty = Math.max(0, item.quantity - dispatchedQty);
 
                         return (
                           <div
@@ -647,36 +732,59 @@ export default function TableManagementView({
                               </span>
                             )}
 
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                            {/* Status badges */}
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                              {dispatchedQty > 0 && (
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--success)', backgroundColor: '#E8F5E9', padding: '2px 6px', borderRadius: '4px' }}>
+                                  ✓ Enviado a Cocina ({dispatchedQty})
+                                </span>
+                              )}
+                              {pendingQty > 0 && (
+                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--danger)', backgroundColor: '#FFEBEE', padding: '2px 6px', borderRadius: '4px' }}>
+                                  ⌛ Pendiente por enviar ({pendingQty})
+                                </span>
+                              )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateItemQuantity(idx, -1)}
-                                  style={{ border: 'none', background: '#FFF', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+                                  style={{ border: '1px solid var(--sand-border)', background: '#FFF', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
                                 >
                                   <Minus size={12} />
                                 </button>
-                                <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>{item.quantity}</span>
+                                <span style={{ fontWeight: 800, fontSize: '0.88rem', padding: '0 4px' }}>{item.quantity}</span>
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateItemQuantity(idx, 1)}
-                                  style={{ border: 'none', background: '#FFF', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
+                                  style={{ border: '1px solid var(--sand-border)', background: '#FFF', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
                                 >
                                   <Plus size={12} />
                                 </button>
                               </div>
 
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: pendingQty > 0 ? 'var(--danger)' : 'var(--success)' }}>
-                                  {pendingQty > 0 ? `⌛ ${pendingQty} pendiente` : '✅ Enviado'}
-                                </span>
-
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <button
+                                  type="button"
+                                  title="Editar nota especial"
                                   onClick={() => {
                                     setItemNoteModal(idx);
                                     setNoteInput(item.note || '');
                                   }}
-                                  style={{ border: 'none', background: 'none', color: 'var(--dark-subdued)', cursor: 'pointer' }}
+                                  style={{ border: 'none', background: 'none', color: 'var(--dark-subdued)', cursor: 'pointer', padding: '2px' }}
                                 >
-                                  <MessageSquare size={14} />
+                                  <MessageSquare size={15} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  title="Cancelar / Anular producto"
+                                  onClick={() => handleCancelItem(idx)}
+                                  style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px' }}
+                                >
+                                  <Trash2 size={15} />
                                 </button>
                               </div>
                             </div>
@@ -696,55 +804,93 @@ export default function TableManagementView({
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={handleDispatchToKitchenAndBar}
-                      disabled={selectedTable.items.length === 0}
-                      style={{
-                        flex: 1,
-                        backgroundColor: 'var(--terracotta)',
-                        color: '#FFF',
-                        border: 'none',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <Send size={16} />
-                      <span>ENVIAR A COCINA Y BARRA</span>
-                    </button>
+                  {/* Dispatch & Checkout buttons */}
+                  {(() => {
+                    const pendingCount = selectedTable.items.reduce((sum, i) => sum + Math.max(0, i.quantity - (i.dispatchedQuantity || 0)), 0);
 
-                    <button
-                      onClick={handleSendToCheckoutCashier}
-                      disabled={selectedTable.items.length === 0}
-                      style={{
-                        flex: 1,
-                        backgroundColor: 'var(--dark-text)',
-                        color: '#FFF',
-                        border: 'none',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <CreditCard size={16} />
-                      <span>ENVIAR A CAJA</span>
-                    </button>
-                  </div>
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={handleDispatchToKitchenAndBar}
+                            disabled={selectedTable.items.length === 0 || pendingCount === 0}
+                            style={{
+                              flex: 1,
+                              backgroundColor: pendingCount > 0 ? 'var(--terracotta)' : '#A5D6A7',
+                              color: '#FFF',
+                              border: 'none',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              fontWeight: 800,
+                              fontSize: '0.82rem',
+                              cursor: (selectedTable.items.length === 0 || pendingCount === 0) ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Send size={15} />
+                            <span>
+                              {pendingCount > 0 ? `ENVIAR NUEVOS (${pendingCount})` : '✓ TODO ENVIADO A COCINA'}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleSendToCheckoutCashier}
+                            disabled={selectedTable.items.length === 0}
+                            style={{
+                              flex: 1,
+                              backgroundColor: 'var(--forest)',
+                              color: '#FFF',
+                              border: 'none',
+                              padding: '10px',
+                              borderRadius: '8px',
+                              fontWeight: 800,
+                              fontSize: '0.82rem',
+                              cursor: selectedTable.items.length === 0 ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <CreditCard size={15} />
+                            <span>ENVIAR A CAJA</span>
+                          </button>
+                        </div>
+
+                        {/* Cancel entire table order button */}
+                        <button
+                          type="button"
+                          onClick={handleCancelEntireTableOrder}
+                          disabled={selectedTable.items.length === 0}
+                          style={{
+                            width: '100%',
+                            backgroundColor: '#FFF',
+                            color: 'var(--danger)',
+                            border: '1px solid var(--danger)',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            cursor: selectedTable.items.length === 0 ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            opacity: selectedTable.items.length === 0 ? 0.5 : 1
+                          }}
+                        >
+                          <Trash2 size={14} />
+                          <span>🚫 ANULAR MESA COMPLETA</span>
+                        </button>
+                      </div>
+                    );
+                  })()}
                 </div>
-
               </div>
 
             </div>

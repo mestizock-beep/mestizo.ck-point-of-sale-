@@ -170,13 +170,14 @@ export default function KitchenDisplayView() {
           gap: '1.25rem'
         }}>
           {tickets.map(ticket => {
+            const isCancellation = Boolean(ticket.isCancellationAlert);
             const elapsed = getElapsedTimeMinutes(ticket.createdAt);
             const isYellow = elapsed >= 5 && elapsed < 10;
-            const isRed = elapsed >= 10;
+            const isRed = elapsed >= 10 || isCancellation;
 
-            const badgeBg = isRed ? '#FFEBEE' : (isYellow ? '#FFFDE7' : '#E8F5E9');
-            const badgeColor = isRed ? 'var(--danger)' : (isYellow ? '#F57F17' : 'var(--success)');
-            const borderColor = isRed ? 'var(--danger)' : (isYellow ? '#FBC02D' : 'var(--sand-border)');
+            const badgeBg = isCancellation ? '#FFEBEE' : (isRed ? '#FFEBEE' : (isYellow ? '#FFFDE7' : '#E8F5E9'));
+            const badgeColor = isCancellation ? '#D32F2F' : (isRed ? 'var(--danger)' : (isYellow ? '#F57F17' : 'var(--success)'));
+            const borderColor = isCancellation ? '#D32F2F' : (isRed ? 'var(--danger)' : (isYellow ? '#FBC02D' : 'var(--sand-border)'));
 
             return (
               <div
@@ -185,8 +186,8 @@ export default function KitchenDisplayView() {
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderRadius: 'var(--radius-lg)',
-                  border: `2px solid ${borderColor}`,
-                  boxShadow: 'var(--shadow-md)',
+                  border: `3px solid ${borderColor}`,
+                  boxShadow: isCancellation ? '0 4px 15px rgba(211,47,47,0.3)' : 'var(--shadow-md)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -203,8 +204,8 @@ export default function KitchenDisplayView() {
                   justifyContent: 'space-between'
                 }}>
                   <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--dark-text)' }}>
-                      Mesa {ticket.tableNumber}
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: isCancellation ? '#D32F2F' : 'var(--dark-text)' }}>
+                      {isCancellation ? `🚨 CANCELACIÓN - Mesa ${ticket.tableNumber}` : `Mesa ${ticket.tableNumber}`}
                     </h3>
                     <span style={{ fontSize: '0.78rem', color: 'var(--dark-subdued)' }}>
                       Mesero: <strong>{ticket.waiterName || 'Mesero'}</strong>

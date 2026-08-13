@@ -155,6 +155,7 @@ export default function BarDisplayView() {
           gap: '1.25rem'
         }}>
           {tickets.map(ticket => {
+            const isCancellation = Boolean(ticket.isCancellationAlert);
             const elapsed = getElapsedTimeMinutes(ticket.createdAt);
 
             return (
@@ -164,8 +165,8 @@ export default function BarDisplayView() {
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderRadius: 'var(--radius-lg)',
-                  border: '2px solid var(--terracotta)',
-                  boxShadow: 'var(--shadow-md)',
+                  border: isCancellation ? '3px solid #D32F2F' : '2px solid var(--terracotta)',
+                  boxShadow: isCancellation ? '0 4px 15px rgba(211,47,47,0.3)' : 'var(--shadow-md)',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
@@ -175,15 +176,15 @@ export default function BarDisplayView() {
                 {/* Header card */}
                 <div style={{
                   padding: '10px 14px',
-                  backgroundColor: 'var(--sand-muted)',
-                  borderBottom: '1px solid var(--sand-border)',
+                  backgroundColor: isCancellation ? '#FFEBEE' : 'var(--sand-muted)',
+                  borderBottom: isCancellation ? '1px solid #D32F2F' : '1px solid var(--sand-border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between'
                 }}>
                   <div>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--dark-text)' }}>
-                      Mesa {ticket.tableNumber}
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: isCancellation ? '#D32F2F' : 'var(--dark-text)' }}>
+                      {isCancellation ? `🚨 CANCELACIÓN - Mesa ${ticket.tableNumber}` : `Mesa ${ticket.tableNumber}`}
                     </h3>
                     <span style={{ fontSize: '0.78rem', color: 'var(--dark-subdued)' }}>
                       Mesero: <strong>{ticket.waiterName || 'Mesero'}</strong>
