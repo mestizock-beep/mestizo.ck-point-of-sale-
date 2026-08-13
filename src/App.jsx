@@ -118,10 +118,19 @@ export default function App() {
     }
 
     // Check registered team users list
-    let registeredTeam = [];
+    let registeredTeam = [
+      { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Morales (Dueño)', password: 'Mestizo2026!', role: 'admin' },
+      { email: 'roberto@restaurantemestizo.com', fullName: 'Roberto Chi', password: 'RobertoChi123@', role: 'cajero' },
+      { email: 'cajero@restaurantemestizo.com', fullName: 'Cajero de Turno', password: 'Caja123456', role: 'cajero' }
+    ];
     try {
       const stored = localStorage.getItem('mestizo_pos_team_users');
-      if (stored) registeredTeam = JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          registeredTeam = parsed;
+        }
+      }
     } catch (e) {}
 
     const matchedUser = registeredTeam.find(u => u.email.toLowerCase() === credentials.email.toLowerCase());
