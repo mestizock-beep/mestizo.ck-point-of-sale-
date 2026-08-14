@@ -306,6 +306,7 @@ export default function App() {
   const handleOpenShift = (initialCash, cashierName) => {
     const shift = openShift(initialCash, cashierName || (currentUser ? currentUser.fullName : 'Cajero Turno'));
     setCurrentShift(shift);
+    setActiveTab('pos');
     return shift;
   };
 

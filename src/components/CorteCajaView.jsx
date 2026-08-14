@@ -24,9 +24,10 @@ export default function CorteCajaView({
       alert('Por favor ingresa un fondo inicial válido (monto mayor o igual a 0).');
       return;
     }
-    const opened = onOpenShift(cashVal, cashierNameInput);
-    setActionSuccessMessage('🎉 ¡Caja abierta correctamente! Turno iniciado con éxito.');
-    setTimeout(() => setActionSuccessMessage(''), 4000);
+    onOpenShift(cashVal, cashierNameInput);
+    if (onNavigateToPOS) {
+      onNavigateToPOS();
+    }
   };
 
   const handleCloseShiftSubmit = (e) => {
