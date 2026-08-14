@@ -22,6 +22,7 @@ import {
   saveInsumos,
   updateInsumoStock,
   addSale,
+  getSales,
   getCurrentShift,
   openShift,
   closeShift,
@@ -225,6 +226,23 @@ export default function App() {
     setCart([]);
     setCheckoutOrder(null);
     setTicketSale(newSale);
+
+    // If the sale was for a Table, automatically free the table!
+    if (salePayload.tableNumber) {
+      const resetTable = {
+        id: salePayload.tableNumber,
+        tableNumber: salePayload.tableNumber,
+        name: `Mesa ${salePayload.tableNumber}`,
+        status: 'free',
+        waiterName: '',
+        items: [],
+        notes: '',
+        createdAt: null,
+        updatedAt: null
+      };
+      const updatedTables = tables.map(t => t.tableNumber === salePayload.tableNumber ? resetTable : t);
+      handleSaveTables(updatedTables);
+    }
   };
 
   // Product & Photo Handlers
@@ -288,6 +306,7 @@ export default function App() {
   const handleOpenShift = (initialCash, cashierName) => {
     const shift = openShift(initialCash, cashierName || (currentUser ? currentUser.fullName : 'Cajero Turno'));
     setCurrentShift(shift);
+    return shift;
   };
 
   const handleCloseShift = (actualCash, notes) => {
@@ -341,6 +360,21 @@ export default function App() {
             onOpenCheckout={handleOpenCheckout}
             currentShift={currentShift}
             currentUser={currentUser}
+            tables={tables}
+            onSelectTableForCheckout={(table) => {
+              const subtotal = table.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+              handleOpenCheckout({
+                tableNumber: table.tableNumber,
+                waiterName: table.waiterName || '',
+                cart: table.items,
+                subtotal,
+                discountPercent: 0,
+                discountAmount: 0,
+                tipPercent: 0,
+                tipAmount: 0,
+                total: subtotal
+              });
+            }}
           />
         )}
 
@@ -353,7 +387,6 @@ export default function App() {
             currentUser={currentUser}
             onSendToCheckout={(orderData) => {
               setCheckoutOrder(orderData);
-              setActiveTab('pos');
             }}
           />
         )}
@@ -387,15 +420,14 @@ export default function App() {
             shiftHistory={shiftHistory}
             onOpenShift={handleOpenShift}
             onCloseShift={handleCloseShift}
+            onNavigateToPOS={() => setActiveTab('pos')}
+            onNavigateToTables={() => setActiveTab('tables')}
           />
         )}
 
         {activeTab === 'reports' && (
           <ReportsView
-            salesHistory={[
-              ...(currentShift?.sales || []),
-              ...shiftHistory.flatMap(s => s.sales || [])
-            ]}
+            salesHistory={getSales()}
             shiftHistory={shiftHistory}
             products={products}
             currentUser={currentUser}

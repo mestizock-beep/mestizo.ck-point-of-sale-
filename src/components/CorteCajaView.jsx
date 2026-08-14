@@ -5,7 +5,9 @@ export default function CorteCajaView({
   currentShift,
   shiftHistory,
   onOpenShift,
-  onCloseShift
+  onCloseShift,
+  onNavigateToPOS,
+  onNavigateToTables
 }) {
   const [initialCashInput, setInitialCashInput] = useState(1000);
   const [cashierNameInput, setCashierNameInput] = useState('Cajero Principal');
@@ -13,41 +15,123 @@ export default function CorteCajaView({
   const [actualCashInput, setActualCashInput] = useState('');
   const [shiftNotes, setShiftNotes] = useState('');
   const [selectedPastShift, setSelectedPastShift] = useState(null);
+  const [actionSuccessMessage, setActionSuccessMessage] = useState('');
 
   const handleOpenShiftSubmit = (e) => {
     e.preventDefault();
-    if (initialCashInput < 0) return;
-    onOpenShift(initialCashInput, cashierNameInput);
+    const cashVal = parseFloat(initialCashInput);
+    if (isNaN(cashVal) || cashVal < 0) {
+      alert('Por favor ingresa un fondo inicial válido (monto mayor o igual a 0).');
+      return;
+    }
+    const opened = onOpenShift(cashVal, cashierNameInput);
+    setActionSuccessMessage('🎉 ¡Caja abierta correctamente! Turno iniciado con éxito.');
+    setTimeout(() => setActionSuccessMessage(''), 4000);
   };
 
   const handleCloseShiftSubmit = (e) => {
     e.preventDefault();
-    if (actualCashInput === '') {
+    if (actualCashInput === '' || isNaN(parseFloat(actualCashInput))) {
       alert('Ingresa la cantidad física de efectivo contada en la caja.');
       return;
     }
-    const closed = onCloseShift(actualCashInput, shiftNotes);
+    if (!confirm('¿Estás seguro de realizar el arqueo y cerrar el turno de caja actual?')) {
+      return;
+    }
+    const closed = onCloseShift(parseFloat(actualCashInput), shiftNotes);
     if (closed) {
       setSelectedPastShift(closed);
       setActualCashInput('');
       setShiftNotes('');
+      setActionSuccessMessage('✓ Turno cerrado y guardado en el historial con éxito.');
+      setTimeout(() => setActionSuccessMessage(''), 5000);
     }
   };
 
-  const expectedCashInDrawer = currentShift ? (currentShift.initialCash + (currentShift.totalCash || 0)) : 0;
+  const expectedCashInDrawer = currentShift ? ((Number(currentShift.initialCash) || 0) + (Number(currentShift.totalCash) || 0)) : 0;
   const actualCashNum = Number(actualCashInput) || 0;
   const discrepancy = actualCashInput !== '' ? actualCashNum - expectedCashInDrawer : 0;
 
   return (
     <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, width: '100%', minWidth: 0, overflowX: 'hidden' }}>
       
-      <div>
-        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          CONTROL FINANCIERO Y AUDITORÍA DE TURNO
-        </span>
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--dark-text)' }}>
-          Corte de Caja & Arqueo de Efectivo
-        </h1>
+      {actionSuccessMessage && (
+        <div style={{
+          backgroundColor: 'var(--success-bg)',
+          color: 'var(--success)',
+          border: '1px solid #C8E6C9',
+          padding: '12px 18px',
+          borderRadius: '12px',
+          fontWeight: 800,
+          fontSize: '0.95rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          boxShadow: 'var(--shadow-sm)'
+        }}>
+          <CheckCircle size={20} />
+          <span>{actionSuccessMessage}</span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            CONTROL FINANCIERO Y AUDITORÍA DE TURNO
+          </span>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--dark-text)' }}>
+            Corte de Caja & Arqueo de Efectivo
+          </h1>
+        </div>
+
+        {currentShift && currentShift.isOpen && (
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {onNavigateToPOS && (
+              <button
+                onClick={onNavigateToPOS}
+                style={{
+                  backgroundColor: 'var(--terracotta)',
+                  color: '#FFF',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <DollarSign size={18} />
+                <span>Ir al Punto de Venta</span>
+              </button>
+            )}
+            {onNavigateToTables && (
+              <button
+                onClick={onNavigateToTables}
+                style={{
+                  backgroundColor: 'var(--dark-green)',
+                  color: '#FFF',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <Landmark size={18} />
+                <span>Ver Mesas</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {!currentShift || !currentShift.isOpen ? (

@@ -71,13 +71,16 @@ export default function InventoryView({
   const handleProductSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    const rawPrice = parseFloat(formData.get('price'));
+    const safePrice = isNaN(rawPrice) ? 0 : Math.max(0, Number(rawPrice.toFixed(2)));
+
     const productPayload = {
       id: productModal.id || `prod-${Date.now().toString().slice(-6)}`,
-      sku: formData.get('sku') || `SKU-${Date.now().toString().slice(-4)}`,
-      name: formData.get('name'),
-      category: formData.get('category'),
-      price: Number(formData.get('price')),
-      description: formData.get('description'),
+      sku: (formData.get('sku') || `SKU-${Date.now().toString().slice(-4)}`).trim(),
+      name: (formData.get('name') || 'Nuevo Platillo').trim(),
+      category: formData.get('category') || 'Comida',
+      price: safePrice,
+      description: (formData.get('description') || '').trim(),
       image: productModal.image || formData.get('image') || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80',
       recipe: productModal.recipe || []
     };
@@ -89,13 +92,16 @@ export default function InventoryView({
   const handleInsumoSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
+    const rawStock = parseFloat(formData.get('stock'));
+    const rawMinStock = parseFloat(formData.get('minStock'));
+
     const payload = {
       id: insumoModal.id || `ins-${Date.now().toString().slice(-6)}`,
-      name: formData.get('name'),
-      unit: formData.get('unit'),
-      stock: Number(formData.get('stock')),
-      minStock: Number(formData.get('minStock')),
-      yieldNote: formData.get('yieldNote') || ''
+      name: (formData.get('name') || 'Insumo').trim(),
+      unit: formData.get('unit') || 'Pieza',
+      stock: isNaN(rawStock) ? 0 : Math.max(0, Number(rawStock.toFixed(3))),
+      minStock: isNaN(rawMinStock) ? 0 : Math.max(0, Number(rawMinStock.toFixed(3))),
+      yieldNote: (formData.get('yieldNote') || '').trim()
     };
     onSaveInsumo(payload);
     setInsumoModal(null);
@@ -106,12 +112,15 @@ export default function InventoryView({
       alert('Ingresa el nombre del nuevo ingrediente');
       return;
     }
+    const rawStock = parseFloat(quickInsumoStock);
+    const rawMin = parseFloat(quickInsumoMinStock);
+
     const newInsumo = {
       id: `ins-${Date.now().toString().slice(-6)}`,
       name: quickInsumoName.trim(),
       unit: quickInsumoUnit,
-      stock: Number(quickInsumoStock),
-      minStock: Number(quickInsumoMinStock),
+      stock: isNaN(rawStock) ? 0 : Math.max(0, Number(rawStock.toFixed(3))),
+      minStock: isNaN(rawMin) ? 0 : Math.max(0, Number(rawMin.toFixed(3))),
       yieldNote: ''
     };
 

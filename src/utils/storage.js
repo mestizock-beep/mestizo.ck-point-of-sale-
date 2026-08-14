@@ -246,10 +246,23 @@ export const getSales = () => getStorageItem(KEYS.SALES, []);
 
 export const addSale = (saleData) => {
   const sales = getSales();
+  const cleanSubtotal = Number(Number(saleData.subtotal || 0).toFixed(2));
+  const cleanDiscountPercent = Number(Number(saleData.discountPercent || 0).toFixed(2));
+  const cleanDiscountAmount = Number(Number(saleData.discountAmount || 0).toFixed(2));
+  const cleanTipPercent = Number(Number(saleData.tipPercent || 0).toFixed(2));
+  const cleanTipAmount = Number(Number(saleData.tipAmount || 0).toFixed(2));
+  const cleanTotal = Number(Number(saleData.total || 0).toFixed(2));
+
   const newSale = {
     id: `MST-${Date.now().toString().slice(-6)}`,
     timestamp: new Date().toISOString(),
-    ...saleData
+    ...saleData,
+    subtotal: cleanSubtotal,
+    discountPercent: cleanDiscountPercent,
+    discountAmount: cleanDiscountAmount,
+    tipPercent: cleanTipPercent,
+    tipAmount: cleanTipAmount,
+    total: cleanTotal
   };
   const updatedSales = [newSale, ...sales];
   setStorageItem(KEYS.SALES, updatedSales);
@@ -257,21 +270,23 @@ export const addSale = (saleData) => {
   let insumos = getInsumos();
   const products = getProducts();
 
-  saleData.items.forEach(cartItem => {
-    const product = products.find(p => p.id === cartItem.id);
-    if (product && product.recipe && Array.isArray(product.recipe)) {
-      product.recipe.forEach(recipeItem => {
-        const requiredAmount = recipeItem.quantity * cartItem.quantity;
-        insumos = insumos.map(ins => {
-          if (ins.id === recipeItem.insumoId) {
-            const newStock = Math.max(0, Number((ins.stock - requiredAmount).toFixed(3)));
-            return { ...ins, stock: newStock };
-          }
-          return ins;
+  if (Array.isArray(saleData.items)) {
+    saleData.items.forEach(cartItem => {
+      const product = products.find(p => p.id === cartItem.id);
+      if (product && product.recipe && Array.isArray(product.recipe)) {
+        product.recipe.forEach(recipeItem => {
+          const requiredAmount = (Number(recipeItem.quantity) || 0) * (Number(cartItem.quantity) || 1);
+          insumos = insumos.map(ins => {
+            if (ins.id === recipeItem.insumoId) {
+              const newStock = Math.max(0, Number(((Number(ins.stock) || 0) - requiredAmount).toFixed(3)));
+              return { ...ins, stock: newStock };
+            }
+            return ins;
+          });
         });
-      });
-    }
-  });
+      }
+    });
+  }
 
   saveInsumos(insumos);
 
@@ -281,11 +296,11 @@ export const addSale = (saleData) => {
     const shiftSales = currentShift.sales || [];
     updatedShift = {
       ...currentShift,
-      salesCount: (currentShift.salesCount || 0) + 1,
-      totalRevenue: (currentShift.totalRevenue || 0) + saleData.total,
-      totalCash: (currentShift.totalCash || 0) + (saleData.paymentMethod === 'Efectivo' ? saleData.total : 0),
-      totalCard: (currentShift.totalCard || 0) + (saleData.paymentMethod === 'Tarjeta' ? saleData.total : 0),
-      totalTransfer: (currentShift.totalTransfer || 0) + (saleData.paymentMethod === 'Transferencia' ? saleData.total : 0),
+      salesCount: (Number(currentShift.salesCount) || 0) + 1,
+      totalRevenue: Number(((Number(currentShift.totalRevenue) || 0) + cleanTotal).toFixed(2)),
+      totalCash: Number(((Number(currentShift.totalCash) || 0) + (saleData.paymentMethod === 'Efectivo' ? cleanTotal : 0)).toFixed(2)),
+      totalCard: Number(((Number(currentShift.totalCard) || 0) + (saleData.paymentMethod === 'Tarjeta' ? cleanTotal : 0)).toFixed(2)),
+      totalTransfer: Number(((Number(currentShift.totalTransfer) || 0) + (saleData.paymentMethod === 'Transferencia' ? cleanTotal : 0)).toFixed(2)),
       sales: [newSale, ...shiftSales]
     };
     saveCurrentShift(updatedShift);
@@ -296,14 +311,14 @@ export const addSale = (saleData) => {
     supabase.from('sales').insert([{
       id: newSale.id,
       timestamp: newSale.timestamp,
-      items: newSale.items,
-      subtotal: newSale.subtotal,
-      discount_percent: newSale.discountPercent,
-      discount_amount: newSale.discountAmount,
-      tip_percent: newSale.tipPercent,
-      tip_amount: newSale.tipAmount,
-      total: newSale.total,
-      payment_method: newSale.paymentMethod,
+      items: newSale.items || [],
+      subtotal: cleanSubtotal,
+      discount_percent: cleanDiscountPercent,
+      discount_amount: cleanDiscountAmount,
+      tip_percent: cleanTipPercent,
+      tip_amount: cleanTipAmount,
+      total: cleanTotal,
+      payment_method: newSale.paymentMethod || 'Efectivo',
       shift_id: updatedShift ? updatedShift.id : null
     }]).catch(console.error);
 
@@ -353,7 +368,7 @@ export const openShift = (initialCash, cashierName = 'Cajero Turno') => {
     id: `SHIFT-${Date.now().toString().slice(-6)}`,
     openedAt: new Date().toISOString(),
     cashierName,
-    initialCash: Number(initialCash),
+    initialCash: Number(Number(initialCash || 0).toFixed(2)),
     isOpen: true,
     salesCount: 0,
     totalRevenue: 0,
@@ -370,17 +385,20 @@ export const closeShift = (actualPhysicalCash, notes = '') => {
   const current = getCurrentShift();
   if (!current) return null;
 
-  const expectedCash = current.initialCash + current.totalCash;
-  const discrepancy = Number(actualPhysicalCash) - expectedCash;
+  const initCash = Number(current.initialCash) || 0;
+  const tCash = Number(current.totalCash) || 0;
+  const expectedCash = Number((initCash + tCash).toFixed(2));
+  const actualNum = Number(Number(actualPhysicalCash || 0).toFixed(2));
+  const discrepancy = Number((actualNum - expectedCash).toFixed(2));
 
   const closedShift = {
     ...current,
     isOpen: false,
     closedAt: new Date().toISOString(),
-    actualPhysicalCash: Number(actualPhysicalCash),
+    actualPhysicalCash: actualNum,
     expectedCash,
     discrepancy,
-    notes
+    notes: notes || ''
   };
 
   const history = getStorageItem(KEYS.SHIFT_HISTORY, []);

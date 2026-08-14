@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Utensils, Search, Plus, Minus, Trash2, Send, CreditCard, Clock, User, AlertCircle, CheckCircle2, MessageSquare, ChevronRight, RefreshCw, X } from 'lucide-react';
+import { Utensils, Search, Plus, Minus, Trash2, Send, CreditCard, Clock, User, AlertCircle, CheckCircle2, MessageSquare, ChevronRight, RefreshCw, X, Printer, FileText } from 'lucide-react';
 import { sendOrderToKitchenAndBar } from '../utils/storage';
 
 export default function TableManagementView({
@@ -16,6 +16,7 @@ export default function TableManagementView({
   const [itemNoteModal, setItemNoteModal] = useState(null); // item
   const [noteInput, setNoteInput] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [preCuentaModal, setPreCuentaModal] = useState(null);
 
   // Quick Instant Customizer state
   const [quickAddProduct, setQuickAddProduct] = useState(null);
@@ -267,6 +268,18 @@ export default function TableManagementView({
     setSelectedTable(null);
     setSuccessMessage(`🚫 Mesa ${resetTable.tableNumber} cancelada y liberada.`);
     setTimeout(() => setSuccessMessage(''), 3500);
+  };
+
+  const handlePrintPreCuenta = () => {
+    if (!selectedTable || selectedTable.items.length === 0) return;
+    const subtotal = selectedTable.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    setPreCuentaModal({
+      tableNumber: selectedTable.tableNumber,
+      waiterName: selectedTable.waiterName || currentWaiterName,
+      items: selectedTable.items,
+      subtotal,
+      date: new Date().toISOString()
+    });
   };
 
   const handleSendToCheckoutCashier = () => {
@@ -858,35 +871,61 @@ export default function TableManagementView({
                             }}
                           >
                             <CreditCard size={15} />
-                            <span>ENVIAR A CAJA</span>
+                            <span>COBRAR EN CAJA</span>
                           </button>
                         </div>
 
-                        {/* Cancel entire table order button */}
-                        <button
-                          type="button"
-                          onClick={handleCancelEntireTableOrder}
-                          disabled={selectedTable.items.length === 0}
-                          style={{
-                            width: '100%',
-                            backgroundColor: '#FFF',
-                            color: 'var(--danger)',
-                            border: '1px solid var(--danger)',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            fontWeight: 700,
-                            fontSize: '0.8rem',
-                            cursor: selectedTable.items.length === 0 ? 'not-allowed' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px',
-                            opacity: selectedTable.items.length === 0 ? 0.5 : 1
-                          }}
-                        >
-                          <Trash2 size={14} />
-                          <span>🚫 ANULAR MESA COMPLETA</span>
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={handlePrintPreCuenta}
+                            disabled={selectedTable.items.length === 0}
+                            style={{
+                              flex: 1,
+                              backgroundColor: '#FFF',
+                              color: 'var(--dark-text)',
+                              border: '1px solid var(--sand-border)',
+                              padding: '8px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: selectedTable.items.length === 0 ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Printer size={14} />
+                            <span>IMPRIMIR PRE-CUENTA</span>
+                          </button>
+
+                          {/* Cancel entire table order button */}
+                          <button
+                            type="button"
+                            onClick={handleCancelEntireTableOrder}
+                            disabled={selectedTable.items.length === 0}
+                            style={{
+                              flex: 1,
+                              backgroundColor: '#FFF',
+                              color: 'var(--danger)',
+                              border: '1px solid var(--danger)',
+                              padding: '8px',
+                              borderRadius: '8px',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              cursor: selectedTable.items.length === 0 ? 'not-allowed' : 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              opacity: selectedTable.items.length === 0 ? 0.5 : 1
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            <span>ANULAR MESA</span>
+                          </button>
+                        </div>
                       </div>
                     );
                   })()}
@@ -1074,6 +1113,156 @@ export default function TableManagementView({
                 }}
               >
                 🚀 AGREGAR A MESA
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE IMPRESIÓN DE PRE-CUENTA (ESTADO DE CUENTA DE MESA) */}
+      {preCuentaModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(28, 43, 34, 0.7)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div className="animate-fade-in" style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 'var(--radius-lg)',
+            width: '420px',
+            maxWidth: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '1.5rem',
+            boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--sand-border)', paddingBottom: '8px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--dark-text)' }}>
+                Pre-Cuenta: Mesa {preCuentaModal.tableNumber}
+              </h3>
+              <button
+                onClick={() => setPreCuentaModal(null)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: '1px solid var(--sand-border)',
+                  backgroundColor: '#FFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div
+              id="printable-ticket"
+              style={{
+                backgroundColor: '#FAFAFA',
+                border: '1px dashed #CCC',
+                padding: '1rem',
+                borderRadius: '8px',
+                fontFamily: "'Courier New', Courier, monospace",
+                fontSize: '0.85rem',
+                lineHeight: 1.4,
+                marginBottom: '1rem'
+              }}
+            >
+              <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', marginBottom: '4px' }}>
+                MESTIZO COMEDOR & BAR
+              </div>
+              <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#666', marginBottom: '8px' }}>
+                *** ESTADO DE CUENTA / PRE-CUENTA ***
+                <br />(Documento no fiscal)
+              </div>
+              <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+              <div>Mesa: #{preCuentaModal.tableNumber}</div>
+              <div>Mesero: {preCuentaModal.waiterName}</div>
+              <div>Fecha: {new Date(preCuentaModal.date).toLocaleString('es-MX')}</div>
+              <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', margin: '4px 0' }}>
+                <span>CANT. PLATILLO</span>
+                <span>TOTAL</span>
+              </div>
+              
+              {preCuentaModal.items.map((item, idx) => (
+                <div key={idx} style={{ margin: '4px 0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{item.quantity}x {item.name}</span>
+                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                  {item.note && (
+                    <div style={{ fontSize: '0.75rem', fontStyle: 'italic', paddingLeft: '8px', color: '#555' }}>
+                      └ Nota: {item.note}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <div style={{ borderTop: '1px dashed #000', margin: '8px 0 6px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '1.05rem', paddingTop: '4px' }}>
+                <span>TOTAL A PAGAR:</span>
+                <span>${preCuentaModal.subtotal.toFixed(2)}</span>
+              </div>
+              <div style={{ borderTop: '1px dashed #000', margin: '8px 0 4px 0' }} />
+              <div style={{ textAlign: 'center', fontSize: '0.75rem', fontStyle: 'italic', marginTop: '6px' }}>
+                ¡Gracias por su preferencia!
+                <br />Propina no incluida.
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setPreCuentaModal(null)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--sand-border)',
+                  backgroundColor: '#FFF',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                style={{
+                  flex: 1.5,
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'var(--terracotta)',
+                  color: '#FFF',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Printer size={16} />
+                <span>Imprimir Pre-Cuenta</span>
               </button>
             </div>
 

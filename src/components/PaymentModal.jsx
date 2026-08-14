@@ -15,9 +15,10 @@ export default function PaymentModal({
   const [transferRef, setTransferRef] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const tenderedNum = Number(cashTendered) || 0;
-  const changeDue = Math.max(0, tenderedNum - total);
+  const changeDue = Math.max(0, Number((tenderedNum - total).toFixed(2)));
   const isCashInsufficient = paymentMethod === 'Efectivo' && tenderedNum < total;
 
   const quickBills = [
@@ -29,24 +30,30 @@ export default function PaymentModal({
   ];
 
   const handleFinish = () => {
+    if (isSubmitting) return;
+
     if (isCashInsufficient) {
       alert(`El monto ingresado ($${tenderedNum.toFixed(2)}) es menor al total a pagar ($${total.toFixed(2)})`);
       return;
     }
 
+    setIsSubmitting(true);
+
     const salePayload = {
       items: cart,
-      subtotal,
-      discountAmount,
-      tipAmount,
-      total,
+      subtotal: Number(Number(subtotal || 0).toFixed(2)),
+      discountAmount: Number(Number(discountAmount || 0).toFixed(2)),
+      tipAmount: Number(Number(tipAmount || 0).toFixed(2)),
+      total: Number(Number(total || 0).toFixed(2)),
       paymentMethod,
-      cashTendered: paymentMethod === 'Efectivo' ? tenderedNum : total,
+      tableNumber: orderData.tableNumber || null,
+      waiterName: orderData.waiterName || null,
+      cashTendered: paymentMethod === 'Efectivo' ? Number(tenderedNum.toFixed(2)) : Number(total.toFixed(2)),
       changeDue: paymentMethod === 'Efectivo' ? changeDue : 0,
       cardType: paymentMethod === 'Tarjeta' ? cardType : null,
       authCode: paymentMethod === 'Tarjeta' ? authCode : null,
       transferRef: paymentMethod === 'Transferencia' ? transferRef : null,
-      customerName: customerName.trim() || 'Cliente General',
+      customerName: customerName.trim() || (orderData.tableNumber ? `Mesa ${orderData.tableNumber}` : 'Cliente General'),
       customerPhone: customerPhone.trim()
     };
 
@@ -91,9 +98,16 @@ export default function PaymentModal({
           borderTopRightRadius: 'var(--radius-lg)'
         }}>
           <div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              PROCESAR PAGO
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--terracotta)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                PROCESAR PAGO
+              </span>
+              {orderData.tableNumber && (
+                <span style={{ backgroundColor: 'var(--terracotta)', color: '#FFF', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
+                  MESA #{orderData.tableNumber} {orderData.waiterName ? `(${orderData.waiterName})` : ''}
+                </span>
+              )}
+            </div>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--dark-text)', marginTop: '2px' }}>
               Total a cobrar: <span style={{ color: 'var(--terracotta)' }}>${total.toFixed(2)}</span>
             </h2>
@@ -348,17 +362,17 @@ export default function PaymentModal({
         <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid var(--sand-border)', backgroundColor: 'var(--sand-muted)', borderBottomLeftRadius: 'var(--radius-lg)', borderBottomRightRadius: 'var(--radius-lg)' }}>
           <button
             onClick={handleFinish}
-            disabled={isCashInsufficient}
+            disabled={isCashInsufficient || isSubmitting}
             style={{
               width: '100%',
-              backgroundColor: isCashInsufficient ? '#CCC' : 'var(--terracotta)',
+              backgroundColor: (isCashInsufficient || isSubmitting) ? '#CCC' : 'var(--terracotta)',
               color: '#FFF',
               border: 'none',
               padding: '14px',
               borderRadius: '10px',
               fontSize: '1.05rem',
               fontWeight: 800,
-              cursor: isCashInsufficient ? 'not-allowed' : 'pointer',
+              cursor: (isCashInsufficient || isSubmitting) ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -367,7 +381,7 @@ export default function PaymentModal({
             }}
           >
             <Check size={20} />
-            <span>FINALIZAR VENTA (${total.toFixed(2)})</span>
+            <span>{isSubmitting ? 'Procesando Venta...' : `FINALIZAR VENTA ($${total.toFixed(2)})`}</span>
           </button>
         </div>
 

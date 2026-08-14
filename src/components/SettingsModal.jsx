@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
-import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck, BarChart3, Usb } from 'lucide-react';
 import { supabase, isSupabaseConfigured, signUpWithEmail } from '../utils/supabaseClient';
+import { getSales, getShiftHistory, getProducts } from '../utils/storage';
+import { getSavedUSBPrinterInfo, connectUSBPrinter, disconnectUSBPrinter, printUSBTestTicket } from '../utils/usbPrinter';
+import ReportsView from './ReportsView';
 
 export default function SettingsModal({
   currentUser,
@@ -26,6 +29,50 @@ export default function SettingsModal({
   const [footerMessage, setFooterMessage] = useState(printerSettings.footerMessage || '¡Gracias por tu visita! Vuelve pronto.');
   const [autoPrint, setAutoPrint] = useState(Boolean(printerSettings.autoPrint));
   const [printerSuccess, setPrinterSuccess] = useState(false);
+  const [usbPrinter, setUsbPrinter] = useState(null);
+  const [usbLoading, setUsbLoading] = useState(false);
+  const [usbMessage, setUsbMessage] = useState(null);
+
+  useEffect(() => {
+    setUsbPrinter(getSavedUSBPrinterInfo());
+  }, []);
+
+  const handleConnectUSB = async () => {
+    setUsbLoading(true);
+    setUsbMessage(null);
+    try {
+      const res = await connectUSBPrinter();
+      setUsbPrinter(res.printerInfo);
+      setUsbMessage({ type: 'success', text: `¡Impresora "${res.printerInfo.productName}" vinculada por cable USB exitosamente!` });
+    } catch (err) {
+      if (err.name !== 'NotFoundError' && !err.message?.includes('No se seleccionó')) {
+        setUsbMessage({ type: 'error', text: err.message || 'No se pudo conectar con el dispositivo USB.' });
+      }
+    } finally {
+      setUsbLoading(false);
+    }
+  };
+
+  const handleDisconnectUSB = () => {
+    disconnectUSBPrinter();
+    setUsbPrinter(null);
+    setUsbMessage({ type: 'info', text: 'Impresora USB desvinculada.' });
+  };
+
+  const handleUSBTestPrint = async () => {
+    setUsbLoading(true);
+    try {
+      await printUSBTestTicket({
+        businessName: headerTitle,
+        paperWidth
+      });
+      setUsbMessage({ type: 'success', text: '✓ Ticket de prueba enviado exitosamente a la impresora USB.' });
+    } catch (err) {
+      setUsbMessage({ type: 'error', text: `Error al imprimir por USB: ${err.message}. Verifica que esté encendida y con papel.` });
+    } finally {
+      setUsbLoading(false);
+    }
+  };
 
   // Team Users state (Admin Only)
   const [teamUsers, setTeamUsers] = useState(() => {
@@ -299,6 +346,28 @@ export default function SettingsModal({
           >
             <Printer size={16} />
             <span>Tickets & Impresora</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('report')}
+            style={{
+              flex: 1,
+              padding: '12px 8px',
+              border: 'none',
+              borderBottom: activeTab === 'report' ? '3px solid var(--terracotta)' : '3px solid transparent',
+              backgroundColor: activeTab === 'report' ? '#FFF' : 'transparent',
+              color: activeTab === 'report' ? 'var(--terracotta)' : 'var(--dark-subdued)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <BarChart3 size={16} />
+            <span>Reporte Mensual</span>
           </button>
         </div>
 
@@ -642,6 +711,136 @@ export default function SettingsModal({
           {activeTab === 'printer' && (
             <form onSubmit={handleSavePrinterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               
+              {/* TARJETA DE DETECCIÓN USB DIRECTA */}
+              <div style={{
+                backgroundColor: usbPrinter ? 'var(--success-bg)' : 'var(--sand-bg)',
+                border: `1px solid ${usbPrinter ? '#C8E6C9' : 'var(--sand-border)'}`,
+                padding: '1.25rem',
+                borderRadius: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.85rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Usb size={20} color={usbPrinter ? 'var(--success)' : 'var(--terracotta)'} />
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--dark-text)' }}>
+                      Detección de Impresora por Cable USB
+                    </span>
+                  </div>
+                  {usbPrinter ? (
+                    <span style={{ backgroundColor: 'var(--success)', color: '#FFF', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
+                      🟢 Conectada por Cable
+                    </span>
+                  ) : (
+                    <span style={{ backgroundColor: '#EEE', color: '#666', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
+                      Sin vincular
+                    </span>
+                  )}
+                </div>
+
+                {usbPrinter ? (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--dark-text)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div><strong>Dispositivo:</strong> {usbPrinter.productName}</div>
+                    <div><strong>Fabricante:</strong> {usbPrinter.manufacturerName} (USB ID: {usbPrinter.vendorId}:{usbPrinter.productId})</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--dark-subdued)', marginTop: '4px' }}>
+                      ✓ Los tickets se imprimirán de forma directa e instantánea a través del cable USB.
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={handleUSBTestPrint}
+                        disabled={usbLoading}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--forest)',
+                          color: '#FFF',
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Printer size={15} />
+                        <span>{usbLoading ? 'Imprimiendo...' : 'Probar Impresión USB'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDisconnectUSB}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          backgroundColor: '#FFF',
+                          color: 'var(--danger)',
+                          border: '1px solid var(--danger)',
+                          fontWeight: 700,
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        <span>Desvincular</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--dark-subdued)', marginBottom: '10px' }}>
+                      Conecta tu impresora térmica a la computadora con su cable USB. Al hacer clic abajo, se abrirá la ventana para detectarla y dejarla configurada.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleConnectUSB}
+                      disabled={usbLoading}
+                      style={{
+                        width: '100%',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--terracotta)',
+                        color: '#FFF',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: 'var(--shadow-sm)'
+                      }}
+                    >
+                      <Usb size={18} />
+                      <span>{usbLoading ? 'Detectando impresora USB...' : '🔌 Detectar y Vincular Impresora USB (Cable)'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {usbMessage && (
+                  <div style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    backgroundColor: usbMessage.type === 'success' ? 'var(--success-bg)' : usbMessage.type === 'error' ? 'var(--danger-bg)' : '#E0F2FE',
+                    color: usbMessage.type === 'success' ? 'var(--success)' : usbMessage.type === 'error' ? 'var(--danger)' : '#0369A1',
+                    border: `1px solid ${usbMessage.type === 'success' ? '#C8E6C9' : usbMessage.type === 'error' ? '#FFCDD2' : '#BAE6FD'}`
+                  }}>
+                    {usbMessage.text}
+                  </div>
+                )}
+              </div>
+
               {printerSuccess && (
                 <div style={{
                   backgroundColor: 'var(--success-bg)',
@@ -758,6 +957,17 @@ export default function SettingsModal({
                 <span>Guardar Ajustes de Impresora</span>
               </button>
             </form>
+          )}
+
+          {activeTab === 'report' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <ReportsView
+                salesHistory={getSales()}
+                shiftHistory={getShiftHistory()}
+                products={getProducts()}
+                currentUser={currentUser}
+              />
+            </div>
           )}
 
         </div>

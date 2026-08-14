@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Printer, MessageCircle, Phone, Copy, Check, X, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Printer, MessageCircle, Phone, Copy, Check, X, ArrowLeft, Usb } from 'lucide-react';
 import Logo from './Logo';
+import { getSavedUSBPrinterInfo, sendRawToUSBPrinter, textToEscPosBytes } from '../utils/usbPrinter';
 
 export default function TicketModal({
   saleData,
@@ -10,12 +11,19 @@ export default function TicketModal({
 }) {
   const [copied, setCopied] = useState(false);
   const [targetPhone, setTargetPhone] = useState(saleData.customerPhone || '');
+  const [usbPrinter, setUsbPrinter] = useState(null);
+  const [usbPrinting, setUsbPrinting] = useState(false);
+  const [printFeedback, setPrintFeedback] = useState('');
+
+  useEffect(() => {
+    setUsbPrinter(getSavedUSBPrinterInfo());
+  }, []);
 
   const generateTicketText = () => {
     const lines = [
-      `*${printerSettings.businessName}*`,
-      `${printerSettings.address}`,
-      `Tel: ${printerSettings.phone}`,
+      `*${printerSettings.businessName || 'MESTIZO COMEDOR & BAR'}*`,
+      `${printerSettings.address || ''}`,
+      `Tel: ${printerSettings.phone || ''}`,
       `--------------------------------`,
       `Ticket: #${saleData.id}`,
       `Fecha: ${new Date(saleData.timestamp).toLocaleString('es-MX')}`,
@@ -51,14 +59,30 @@ export default function TicketModal({
     }
 
     lines.push(`--------------------------------`);
-    lines.push(`¡Gracias por su compra en Mestizo!`);
+    lines.push(printerSettings.footerMessage || '¡Gracias por su compra en Mestizo!');
 
     return lines.join('\n');
   };
 
   const ticketText = generateTicketText();
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (usbPrinter) {
+      setUsbPrinting(true);
+      setPrintFeedback('Enviando a impresora USB...');
+      try {
+        const rawBytes = textToEscPosBytes(ticketText);
+        await sendRawToUSBPrinter(rawBytes);
+        setPrintFeedback('✓ ¡Ticket impreso por cable USB!');
+        setTimeout(() => setPrintFeedback(''), 3000);
+        return;
+      } catch (err) {
+        console.warn('Error en USB directo, usando impresión estándar:', err);
+        setPrintFeedback('Abriendo ventana de impresión...');
+      } finally {
+        setUsbPrinting(false);
+      }
+    }
     window.print();
   };
 
@@ -267,10 +291,32 @@ export default function TicketModal({
             backgroundColor: '#FFFFFF',
             borderLeft: '1px solid var(--sand-border)'
           }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Opciones de Ticket</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Opciones de Ticket</h3>
+              {usbPrinter && (
+                <span style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)', border: '1px solid #C8E6C9', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Usb size={12} />
+                  <span>USB Directo</span>
+                </span>
+              )}
+            </div>
+
+            {printFeedback && (
+              <div style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                backgroundColor: printFeedback.includes('✓') ? 'var(--success-bg)' : '#E0F2FE',
+                color: printFeedback.includes('✓') ? 'var(--success)' : '#0369A1'
+              }}>
+                {printFeedback}
+              </div>
+            )}
 
             <button
               onClick={handlePrint}
+              disabled={usbPrinting}
               style={{
                 padding: '12px',
                 borderRadius: '10px',
@@ -279,7 +325,7 @@ export default function TicketModal({
                 border: 'none',
                 fontWeight: 800,
                 fontSize: '0.95rem',
-                cursor: 'pointer',
+                cursor: usbPrinting ? 'wait' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -288,7 +334,7 @@ export default function TicketModal({
               }}
             >
               <Printer size={20} />
-              Imprimir Ticket Térmico
+              <span>{usbPrinting ? 'Enviando a USB...' : 'Imprimir Ticket Térmico'}</span>
             </button>
 
             <div style={{ borderTop: '1px solid var(--sand-border)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>

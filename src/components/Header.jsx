@@ -305,6 +305,30 @@ export default function Header({
           </div>
         )}
 
+        {onOpenPrinterSettings && (
+          <button
+            onClick={onOpenPrinterSettings}
+            title="Configurar Impresora Térmica y Cable USB"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              borderRadius: '10px',
+              border: '1px solid var(--sand-border)',
+              backgroundColor: 'var(--sand-muted)',
+              color: 'var(--dark-text)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Printer size={18} color="var(--terracotta)" />
+            <span>Impresora</span>
+          </button>
+        )}
+
         {onOpenSettings && (
           <button
             onClick={onOpenSettings}
