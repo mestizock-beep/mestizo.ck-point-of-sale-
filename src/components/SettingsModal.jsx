@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck, BarChart3, Usb } from 'lucide-react';
+import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck, BarChart3, Usb, Sparkles } from 'lucide-react';
 import { supabase, isSupabaseConfigured, signUpWithEmail } from '../utils/supabaseClient';
 import { getSales, getShiftHistory, getProducts } from '../utils/storage';
 import { getSavedUSBPrinterInfo, connectUSBPrinter, disconnectUSBPrinter, printUSBTestTicket } from '../utils/usbPrinter';
+import { getGeminiApiKey, saveGeminiApiKey } from '../utils/aiEngine';
 import ReportsView from './ReportsView';
 
 export default function SettingsModal({
@@ -32,6 +33,17 @@ export default function SettingsModal({
   const [usbPrinter, setUsbPrinter] = useState(null);
   const [usbLoading, setUsbLoading] = useState(false);
   const [usbMessage, setUsbMessage] = useState(null);
+
+  // Gemini AI Settings state
+  const [geminiKeyInput, setGeminiKeyInput] = useState(() => getGeminiApiKey());
+  const [aiKeyStatus, setAiKeyStatus] = useState(null);
+
+  const handleSaveGeminiKey = (e) => {
+    e.preventDefault();
+    saveGeminiApiKey(geminiKeyInput);
+    setAiKeyStatus({ type: 'success', text: geminiKeyInput.trim() ? '✓ API Key de Google Gemini guardada exitosamente.' : '✓ Configuración restablecida al Motor Local Offline.' });
+    setTimeout(() => setAiKeyStatus(null), 4000);
+  };
 
   useEffect(() => {
     setUsbPrinter(getSavedUSBPrinterInfo());
@@ -346,6 +358,28 @@ export default function SettingsModal({
           >
             <Printer size={16} />
             <span>Tickets & Impresora</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ai')}
+            style={{
+              flex: 1,
+              padding: '12px 8px',
+              border: 'none',
+              borderBottom: activeTab === 'ai' ? '3px solid var(--terracotta)' : '3px solid transparent',
+              backgroundColor: activeTab === 'ai' ? '#FFF' : 'transparent',
+              color: activeTab === 'ai' ? 'var(--terracotta)' : 'var(--dark-subdued)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Sparkles size={16} />
+            <span>Inteligencia Artificial</span>
           </button>
           
           <button
@@ -955,6 +989,83 @@ export default function SettingsModal({
               >
                 <Save size={16} />
                 <span>Guardar Ajustes de Impresora</span>
+              </button>
+            </form>
+          )}
+
+          {activeTab === 'ai' && (
+            <form onSubmit={handleSaveGeminiKey} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ backgroundColor: 'var(--sand-bg)', padding: '1rem', borderRadius: '12px', border: '1px solid var(--sand-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Sparkles size={20} color="var(--terracotta)" />
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--dark-text)' }}>
+                    Motor de Inteligencia Artificial (Mestizo Copilot)
+                  </h4>
+                </div>
+                <p style={{ fontSize: '0.84rem', color: 'var(--dark-subdued)', lineHeight: 1.4 }}>
+                  Mestizo POS incluye un <strong>Motor Analítico Offline</strong> integrado que no requiere conexión a internet. Para habilitar comprensión conversacional ilimitada en lenguaje natural con <strong>Google Gemini</strong>, ingresa tu API Key a continuación.
+                </p>
+              </div>
+
+              {aiKeyStatus && (
+                <div style={{
+                  backgroundColor: aiKeyStatus.type === 'success' ? 'var(--success-bg)' : 'var(--danger-bg)',
+                  color: aiKeyStatus.type === 'success' ? 'var(--success)' : 'var(--danger)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <CheckCircle size={16} />
+                  <span>{aiKeyStatus.text}</span>
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '6px' }}>
+                  Google Gemini API Key (Opcional)
+                </label>
+                <input
+                  type="password"
+                  value={geminiKeyInput}
+                  onChange={(e) => setGeminiKeyInput(e.target.value)}
+                  placeholder="AIzaSy..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--sand-border)',
+                    fontSize: '0.9rem',
+                    fontFamily: 'monospace'
+                  }}
+                />
+                <span style={{ fontSize: '0.75rem', color: 'var(--dark-subdued)', display: 'block', marginTop: '4px' }}>
+                  Tu API Key se almacena localmente de forma segura en este dispositivo.
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  backgroundColor: 'var(--terracotta)',
+                  color: '#FFF',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontSize: '0.9rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  alignSelf: 'flex-start',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Save size={16} />
+                <span>Guardar Configuración de IA</span>
               </button>
             </form>
           )}

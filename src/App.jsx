@@ -13,6 +13,8 @@ import LowStockModal from './components/LowStockModal';
 import LoginView from './components/LoginView';
 import SettingsModal from './components/SettingsModal';
 import ReportsView from './components/ReportsView';
+import AIAdvisorView from './components/AIAdvisorView';
+import AICopilotWidget from './components/AICopilotWidget';
 
 import {
   initStorage,
@@ -46,6 +48,7 @@ export default function App() {
   // Storage state
   const [products, setProducts] = useState([]);
   const [insumos, setInsumos] = useState([]);
+  const [sales, setSales] = useState([]);
   const [cart, setCart] = useState([]);
   const [tables, setTables] = useState([]);
   const [currentShift, setCurrentShift] = useState(null);
@@ -63,6 +66,14 @@ export default function App() {
     initStorage().then(() => {
       refreshAllData();
     });
+
+    // Cross-tab / Window live synchronization
+    const handleStorageUpdate = () => {
+      refreshAllData();
+    };
+
+    window.addEventListener('mestizo_pos_storage_update', handleStorageUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
 
     // Check stored user session
     const savedUser = localStorage.getItem(USER_SESSION_KEY);
@@ -102,15 +113,24 @@ export default function App() {
         }
       });
 
-      return () => subscription.unsubscribe();
+      return () => {
+        subscription.unsubscribe();
+        window.removeEventListener('mestizo_pos_storage_update', handleStorageUpdate);
+        window.removeEventListener('storage', handleStorageUpdate);
+      };
     } else {
       setCheckingAuth(false);
+      return () => {
+        window.removeEventListener('mestizo_pos_storage_update', handleStorageUpdate);
+        window.removeEventListener('storage', handleStorageUpdate);
+      };
     }
   }, []);
 
   const refreshAllData = () => {
     setProducts(getProducts());
     setInsumos(getInsumos());
+    setSales(getSales());
     setTables(getTableOrders());
     setCurrentShift(getCurrentShift());
     setShiftHistory(getShiftHistory());
@@ -221,6 +241,7 @@ export default function App() {
 
   const handleCompleteSale = (salePayload) => {
     const { newSale, updatedInsumos } = addSale(salePayload);
+    setSales(getSales());
     setInsumos(updatedInsumos);
     setCurrentShift(getCurrentShift());
     setCart([]);
@@ -355,6 +376,7 @@ export default function App() {
         {activeTab === 'pos' && (
           <POSView
             products={products}
+            insumos={insumos}
             categories={INITIAL_CATEGORIES}
             cart={cart}
             setCart={setCart}
@@ -384,10 +406,12 @@ export default function App() {
             tables={tables}
             setTables={handleSaveTables}
             products={products}
+            insumos={insumos}
             categories={INITIAL_CATEGORIES}
             currentUser={currentUser}
             onSendToCheckout={(orderData) => {
               setCheckoutOrder(orderData);
+              setActiveTab('pos');
             }}
           />
         )}
@@ -428,13 +452,28 @@ export default function App() {
 
         {activeTab === 'reports' && (
           <ReportsView
-            salesHistory={getSales()}
+            salesHistory={sales}
             shiftHistory={shiftHistory}
             products={products}
             currentUser={currentUser}
           />
         )}
+
+        {activeTab === 'ai' && (
+          <AIAdvisorView
+            products={products}
+            insumos={insumos}
+            sales={sales}
+            shiftHistory={shiftHistory}
+            onNavigateToTab={(tab) => setActiveTab(tab)}
+            onOpenSettings={() => setShowSettingsModal(true)}
+            onRefreshData={refreshAllData}
+          />
+        )}
       </main>
+
+      {/* Floating Copilot Widget */}
+      <AICopilotWidget onOpenFullAIView={() => setActiveTab('ai')} />
 
       {/* MODALS */}
       {checkoutOrder && (

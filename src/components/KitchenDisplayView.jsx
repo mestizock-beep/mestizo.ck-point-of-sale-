@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Utensils, Clock, CheckCircle, AlertTriangle, Flame, BellRing, BellOff, RefreshCw } from 'lucide-react';
 import { getKitchenTickets, saveKitchenTickets } from '../utils/storage';
 import { playNotificationBell } from '../utils/audioHelper';
@@ -7,17 +7,17 @@ export default function KitchenDisplayView() {
   const [tickets, setTickets] = useState([]);
   const [now, setNow] = useState(Date.now());
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [prevCount, setPrevCount] = useState(0);
+  const prevCountRef = useRef(0);
 
   const loadTickets = () => {
     const allTickets = getKitchenTickets();
     const kitchenOnly = allTickets.filter(t => t.type === 'kitchen' && t.status !== 'completed');
     
     // Play bell chime if new ticket arrived
-    if (kitchenOnly.length > prevCount && prevCount > 0 && soundEnabled) {
+    if (kitchenOnly.length > prevCountRef.current && prevCountRef.current > 0 && soundEnabled) {
       playNotificationBell();
     }
-    setPrevCount(kitchenOnly.length);
+    prevCountRef.current = kitchenOnly.length;
     setTickets(kitchenOnly);
   };
 
@@ -26,10 +26,23 @@ export default function KitchenDisplayView() {
     const timer = setInterval(() => {
       setNow(Date.now());
       loadTickets();
-    }, 4000);
+    }, 3000);
 
-    return () => clearInterval(timer);
-  }, [prevCount, soundEnabled]);
+    const handleStorageUpdate = (e) => {
+      if (!e.detail || e.detail.key === 'mestizo_pos_kitchen_tickets') {
+        loadTickets();
+      }
+    };
+
+    window.addEventListener('mestizo_pos_storage_update', handleStorageUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('mestizo_pos_storage_update', handleStorageUpdate);
+      window.removeEventListener('storage', handleStorageUpdate);
+    };
+  }, [soundEnabled]);
 
   const handleMarkItemDone = (ticketId, itemIdx) => {
     const allTickets = getKitchenTickets();

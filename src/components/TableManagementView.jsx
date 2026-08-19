@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Utensils, Search, Plus, Minus, Trash2, Send, CreditCard, Clock, User, AlertCircle, CheckCircle2, MessageSquare, ChevronRight, RefreshCw, X, Printer, FileText } from 'lucide-react';
-import { sendOrderToKitchenAndBar } from '../utils/storage';
+import { sendOrderToKitchenAndBar, sendCancellationNoticeToKitchenAndBar, saveTableOrders, calculateProductPortions } from '../utils/storage';
 
 export default function TableManagementView({
   tables,
   setTables,
   products,
+  insumos = [],
   categories,
   currentUser,
   onSendToCheckout
@@ -33,7 +34,11 @@ export default function TableManagementView({
   });
 
   const handleOpenQuickAdd = (product) => {
-    if (product.stock <= 0) return;
+    const available = calculateProductPortions(product, insumos);
+    if (available <= 0) {
+      alert(`El producto "${product.name}" está agotado por falta de insumos en bodega.`);
+      return;
+    }
     setQuickAddProduct(product);
     setSelectedChips([]);
     setCustomNoteText('');
@@ -519,7 +524,15 @@ export default function TableManagementView({
                 )}
 
                 <button
-                  onClick={() => setSelectedTable(null)}
+                  onClick={() => {
+                    // Persist current state of selectedTable before closing
+                    if (selectedTable) {
+                      const updatedTables = tables.map(t => t.tableNumber === selectedTable.tableNumber ? selectedTable : t);
+                      setTables(updatedTables);
+                      saveTableOrders(updatedTables);
+                    }
+                    setSelectedTable(null);
+                  }}
                   style={{
                     width: '32px',
                     height: '32px',
@@ -650,54 +663,69 @@ export default function TableManagementView({
                   alignContent: 'start',
                   paddingRight: '4px'
                 }}>
-                  {filteredProducts.map(prod => (
-                    <div
-                      key={prod.id}
-                      onClick={() => handleOpenQuickAdd(prod)}
-                      style={{
-                        backgroundColor: '#FFF',
-                        borderRadius: '8px',
-                        border: '1px solid var(--sand-border)',
-                        padding: '8px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        minHeight: '85px',
-                        transition: 'transform 0.1s ease',
-                        position: 'relative'
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark-text)' }}>
-                        {prod.name}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                        <span style={{ fontWeight: 800, color: 'var(--terracotta)', fontSize: '0.88rem' }}>
-                          ${prod.price.toFixed(2)}
-                        </span>
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddItemToTable(prod);
-                          }}
-                          title="Agregar directo sin modificaciones"
-                          style={{
-                            backgroundColor: 'var(--terracotta)',
-                            color: '#FFF',
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Plus size={14} />
+                  {filteredProducts.map(prod => {
+                    const available = calculateProductPortions(prod, insumos);
+                    const isOutOfStock = available <= 0;
+
+                    return (
+                      <div
+                        key={prod.id}
+                        onClick={() => !isOutOfStock && handleOpenQuickAdd(prod)}
+                        style={{
+                          backgroundColor: '#FFF',
+                          borderRadius: '8px',
+                          border: isOutOfStock ? '1px dashed var(--danger)' : '1px solid var(--sand-border)',
+                          padding: '8px',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                          opacity: isOutOfStock ? 0.6 : 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          minHeight: '85px',
+                          transition: 'transform 0.1s ease',
+                          position: 'relative'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--dark-text)' }}>
+                            {prod.name}
+                          </div>
+                          {isOutOfStock && (
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--danger)' }}>
+                              Agotado
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--terracotta)', fontSize: '0.88rem' }}>
+                            ${prod.price.toFixed(2)}
+                          </span>
+                          {!isOutOfStock && (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddItemToTable(prod);
+                              }}
+                              title="Agregar directo sin modificaciones"
+                              style={{
+                                backgroundColor: 'var(--terracotta)',
+                                color: '#FFF',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Plus size={14} />
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

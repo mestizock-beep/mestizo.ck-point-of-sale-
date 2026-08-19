@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -22,8 +22,8 @@ import {
 export default function ReportsView({ salesHistory = [], shiftHistory = [], products = [], currentUser }) {
   const [period, setPeriod] = useState('this_month'); // 'this_month' | 'last_month' | 'last_30' | 'all'
 
-  // Filter sales according to selected period
-  const filterSalesByPeriod = () => {
+  // Filter sales according to selected period with automatic reactive update
+  const filteredSales = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
@@ -45,9 +45,7 @@ export default function ReportsView({ salesHistory = [], shiftHistory = [], prod
       }
       return true; // 'all'
     });
-  };
-
-  const filteredSales = filterSalesByPeriod();
+  }, [salesHistory, period]);
 
   // 1. Executive Metrics
   const totalRevenue = filteredSales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);

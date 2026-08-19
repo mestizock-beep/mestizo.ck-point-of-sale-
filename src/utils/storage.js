@@ -1,5 +1,5 @@
-import { INITIAL_PRODUCTS, INITIAL_INSUMOS, INITIAL_PRINTER_SETTINGS } from './initialData';
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { INITIAL_PRODUCTS, INITIAL_INSUMOS, INITIAL_PRINTER_SETTINGS } from './initialData.js';
+import { supabase, isSupabaseConfigured } from './supabaseClient.js';
 
 const KEYS = {
   PRODUCTS: 'mestizo_pos_products',
@@ -37,9 +37,48 @@ const getStorageItem = (key, fallback) => {
 const setStorageItem = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('mestizo_pos_storage_update', { detail: { key, value } }));
+    }
   } catch (e) {
     console.error(`Error writing ${key} to localStorage`, e);
   }
+};
+
+/**
+ * Calcula la disponibilidad real de un producto (porciones preparables) en función de los insumos de su receta.
+ * Si no tiene receta configurada, asume disponible por defecto (999).
+ */
+export const calculateProductPortions = (product, insumosList = null) => {
+  if (!product) return 0;
+  const currentInsumos = insumosList || getInsumos();
+
+  if (!product.recipe || !Array.isArray(product.recipe) || product.recipe.length === 0) {
+    return 999; // Si no requiere receta de materias primas
+  }
+
+  let maxPortions = Infinity;
+
+  for (const recipeItem of product.recipe) {
+    const insumo = currentInsumos.find(i => i.id === recipeItem.insumoId);
+    const requiredPerPortion = Number(recipeItem.quantity) || 0;
+
+    if (!insumo || requiredPerPortion <= 0) {
+      continue;
+    }
+
+    const availableStock = Number(insumo.stock) || 0;
+    if (availableStock <= 0) {
+      return 0; // Insumo totalmente agotado
+    }
+
+    const possibleWithThisInsumo = Math.floor(availableStock / requiredPerPortion);
+    if (possibleWithThisInsumo < maxPortions) {
+      maxPortions = possibleWithThisInsumo;
+    }
+  }
+
+  return maxPortions === Infinity ? 999 : maxPortions;
 };
 
 export const initStorage = async () => {

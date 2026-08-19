@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle, ArrowRight, Lock, ShieldAlert, X } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle, ArrowRight, X, Receipt, Clock } from 'lucide-react';
+import { getSales, calculateProductPortions } from '../utils/storage';
 
 export default function POSView({
   products,
+  insumos = [],
   categories,
   cart,
   setCart,
@@ -43,7 +45,11 @@ export default function POSView({
   });
 
   const handleOpenQuickAdd = (product) => {
-    if (product.stock <= 0) return;
+    const availableStock = calculateProductPortions(product, insumos);
+    if (availableStock <= 0) {
+      alert(`El platillo "${product.name}" está agotado porque se terminaron los ingredientes en bodega.`);
+      return;
+    }
     setQuickAddProduct(product);
     setSelectedChips([]);
     setCustomNoteText('');
@@ -71,19 +77,24 @@ export default function POSView({
   };
 
   const addToCartCustomized = (product, note = '') => {
-    if (product.stock <= 0) return;
+    const availableStock = calculateProductPortions(product, insumos);
+    if (availableStock <= 0) {
+      alert(`El platillo "${product.name}" no está disponible por falta de insumos.`);
+      return;
+    }
+
     setCart(prevCart => {
       const existing = prevCart.find(item => item.id === product.id && (item.note || '') === note);
       if (existing) {
-        if (existing.quantity >= product.stock) {
-          alert(`No hay más unidades disponibles de "${product.name}". Stock actual: ${product.stock}`);
+        if (existing.quantity >= availableStock) {
+          alert(`No hay más unidades preparables de "${product.name}". Máximo por insumos: ${availableStock}`);
           return prevCart;
         }
         return prevCart.map(item =>
           (item.id === product.id && (item.note || '') === note) ? { ...item, quantity: item.quantity + 1 } : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1, note }];
+        return [...prevCart, { ...product, quantity: 1, note, maxPortions: availableStock }];
       }
     });
   };
@@ -98,8 +109,10 @@ export default function POSView({
         if (item.id === id) {
           const newQty = item.quantity + delta;
           if (newQty <= 0) return null;
-          if (newQty > item.stock) {
-            alert(`Stock máximo alcanzado para "${item.name}". Stock: ${item.stock}`);
+          const product = products.find(p => p.id === item.id) || item;
+          const availableStock = calculateProductPortions(product, insumos);
+          if (newQty > availableStock) {
+            alert(`Stock máximo alcanzado para "${item.name}" según insumos disponibles (${availableStock} porciones).`);
             return item;
           }
           return { ...item, quantity: newQty };
@@ -149,11 +162,13 @@ export default function POSView({
     <div style={{
       display: 'flex',
       flexDirection: isMobile ? 'column' : 'row',
+      flexWrap: isMobile ? 'nowrap' : 'wrap',
+      alignItems: isMobile ? 'stretch' : 'flex-start',
       flex: 1,
       minHeight: 'calc(100vh - 72px)',
       gap: isMobile ? '0.75rem' : '1.25rem',
       padding: isMobile ? '0.75rem' : '1.25rem',
-      overflow: isMobile ? 'visible' : 'hidden',
+      overflowY: 'auto',
       paddingBottom: (isMobile && cart.length > 0 && mobileTab === 'menu') ? '80px' : (isMobile ? '0.75rem' : '1.25rem')
     }}>
       
@@ -357,8 +372,9 @@ export default function POSView({
           paddingRight: '4px'
         }}>
           {filteredProducts.map(product => {
-            const isOutOfStock = product.stock <= 0;
-            const isLowStock = product.stock > 0 && product.stock <= product.minStock;
+            const availableStock = calculateProductPortions(product, insumos);
+            const isOutOfStock = availableStock <= 0;
+            const isLowStock = availableStock > 0 && availableStock <= 3;
 
             return (
               <div
@@ -412,23 +428,9 @@ export default function POSView({
                       padding: '3px 8px',
                       borderRadius: '12px'
                     }}>
-                      Últimos {product.stock}
+                      Últimos {availableStock}
                     </span>
-                  ) : (
-                    <span style={{
-                      position: 'absolute',
-                      top: '8px',
-                      right: '8px',
-                      backgroundColor: 'rgba(28, 43, 34, 0.75)',
-                      color: '#FFF',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      padding: '3px 8px',
-                      borderRadius: '12px'
-                    }}>
-                      Stock: {product.stock}
-                    </span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div style={{ padding: '0.9rem', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
@@ -887,6 +889,112 @@ export default function POSView({
           </div>
         </div>
       )}
+
+      {/* ===== VENTAS DEL DÍA ===== */}
+      {!isMobile && (() => {
+        const allSales = getSales();
+        const today = new Date();
+        const todaySales = allSales.filter(s => {
+          const d = new Date(s.timestamp || s.createdAt);
+          return d.getFullYear() === today.getFullYear() &&
+                 d.getMonth() === today.getMonth() &&
+                 d.getDate() === today.getDate();
+        });
+        const todayTotal = todaySales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+
+        return (
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid var(--sand-border)',
+            marginTop: '0',
+            overflow: 'hidden',
+            gridColumn: '1 / -1'
+          }}>
+            <div style={{
+              padding: '0.85rem 1.25rem',
+              backgroundColor: 'var(--sand-muted)',
+              borderBottom: '1px solid var(--sand-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Receipt size={18} color="var(--terracotta)" />
+                <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--dark-text)' }}>
+                  Ventas del Día
+                </span>
+                <span style={{
+                  backgroundColor: 'var(--terracotta)', color: '#FFF',
+                  fontSize: '0.72rem', fontWeight: 800,
+                  padding: '2px 8px', borderRadius: '20px'
+                }}>
+                  {todaySales.length} venta{todaySales.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--forest)' }}>
+                Total del día: ${todayTotal.toFixed(2)}
+              </span>
+            </div>
+
+            {todaySales.length === 0 ? (
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--dark-subdued)', fontSize: '0.88rem' }}>
+                <Receipt size={36} strokeWidth={1} color="var(--sand-border)" style={{ marginBottom: '8px' }} />
+                <p>Aún no hay ventas registradas hoy.</p>
+                <p style={{ fontSize: '0.78rem', marginTop: '4px', opacity: 0.7 }}>Las ventas aparecerán aquí en tiempo real al completar cobros.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--sand-bg)', textAlign: 'left' }}>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Ticket</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Hora</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Cliente / Mesa</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Platillos</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Método</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', textAlign: 'right' }}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {todaySales.map((sale, idx) => {
+                      const saleDate = new Date(sale.timestamp || sale.createdAt);
+                      const timeStr = saleDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                      const itemNames = (sale.items || []).map(i => `${i.quantity}x ${i.name}`).join(', ');
+                      const methodColors = {
+                        'Efectivo': { bg: '#E8F5E9', color: '#2E7D32' },
+                        'Tarjeta': { bg: '#E3F2FD', color: '#1565C0' },
+                        'Transferencia': { bg: '#FFF8E1', color: '#E65100' }
+                      };
+                      const mc = methodColors[sale.paymentMethod] || { bg: 'var(--sand-bg)', color: 'var(--dark-text)' };
+
+                      return (
+                        <tr key={sale.id} style={{ borderTop: '1px solid var(--sand-border)', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : 'var(--sand-bg)' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--terracotta)', fontFamily: 'monospace' }}>{sale.id}</td>
+                          <td style={{ padding: '8px 12px', color: 'var(--dark-subdued)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={13} /> {timeStr}
+                          </td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{sale.customerName || 'Cliente General'}</td>
+                          <td style={{ padding: '8px 12px', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--dark-subdued)' }}>{itemNames}</td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <span style={{ backgroundColor: mc.bg, color: mc.color, padding: '2px 8px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem' }}>
+                              {sale.paymentMethod}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--forest)', textAlign: 'right' }}>
+                            ${Number(sale.total).toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
     </div>
   );

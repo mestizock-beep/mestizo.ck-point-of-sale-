@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine, BarChart3 } from 'lucide-react';
+import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine, BarChart3, Sparkles } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Header({
@@ -220,6 +220,29 @@ export default function Header({
           <BarChart3 size={18} />
           <span>Reportes & Analytics</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('ai')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '9px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s ease',
+            backgroundColor: activeTab === 'ai' ? 'var(--terracotta)' : 'transparent',
+            color: activeTab === 'ai' ? '#FFFFFF' : 'var(--terracotta)',
+            boxShadow: activeTab === 'ai' ? 'var(--shadow-sm)' : 'none'
+          }}
+        >
+          <Sparkles size={18} color={activeTab === 'ai' ? '#FFFFFF' : 'var(--terracotta)'} />
+          <span>Mestizo IA</span>
+        </button>
       </nav>
 
       {/* Right Controls & Status Indicators */}
@@ -248,6 +271,8 @@ export default function Header({
         )}
 
         <div
+          onClick={() => setActiveTab('corte')}
+          title="Ver estado de caja y arqueo"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -258,7 +283,9 @@ export default function Header({
             borderRadius: '20px',
             fontSize: '0.82rem',
             fontWeight: 700,
-            border: `1px solid ${currentShift && currentShift.isOpen ? '#C8E6C9' : '#FFCDD2'}`
+            cursor: 'pointer',
+            border: `1px solid ${currentShift && currentShift.isOpen ? '#C8E6C9' : '#FFCDD2'}`,
+            transition: 'all 0.2s ease'
           }}
         >
           <span
@@ -272,7 +299,7 @@ export default function Header({
           {currentShift && currentShift.isOpen ? (
             <span>Caja Abierta por {currentShift.cashierName || 'Usiel'} (${currentShift.initialCash.toFixed(0)})</span>
           ) : (
-            <span>Caja Cerrada</span>
+            <span>Caja Cerrada (Clic para Abrir)</span>
           )}
         </div>
 

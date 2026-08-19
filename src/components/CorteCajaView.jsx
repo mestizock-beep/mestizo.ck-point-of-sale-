@@ -16,22 +16,31 @@ export default function CorteCajaView({
   const [shiftNotes, setShiftNotes] = useState('');
   const [selectedPastShift, setSelectedPastShift] = useState(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenShiftSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     const cashVal = parseFloat(initialCashInput);
     if (isNaN(cashVal) || cashVal < 0) {
       alert('Por favor ingresa un fondo inicial válido (monto mayor o igual a 0).');
       return;
     }
-    onOpenShift(cashVal, cashierNameInput);
-    if (onNavigateToPOS) {
-      onNavigateToPOS();
-    }
+
+    setIsSubmitting(true);
+    const shift = onOpenShift(cashVal, cashierNameInput);
+    setActionSuccessMessage(`✓ ¡Caja abierta con éxito! Turno #${shift?.id || ''} iniciado.`);
+    setTimeout(() => {
+      setActionSuccessMessage('');
+      setIsSubmitting(false);
+    }, 4000);
   };
 
   const handleCloseShiftSubmit = (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (actualCashInput === '' || isNaN(parseFloat(actualCashInput))) {
       alert('Ingresa la cantidad física de efectivo contada en la caja.');
       return;
@@ -39,13 +48,20 @@ export default function CorteCajaView({
     if (!confirm('¿Estás seguro de realizar el arqueo y cerrar el turno de caja actual?')) {
       return;
     }
+
+    setIsSubmitting(true);
     const closed = onCloseShift(parseFloat(actualCashInput), shiftNotes);
     if (closed) {
       setSelectedPastShift(closed);
       setActualCashInput('');
       setShiftNotes('');
       setActionSuccessMessage('✓ Turno cerrado y guardado en el historial con éxito.');
-      setTimeout(() => setActionSuccessMessage(''), 5000);
+      setTimeout(() => {
+        setActionSuccessMessage('');
+        setIsSubmitting(false);
+      }, 5000);
+    } else {
+      setIsSubmitting(false);
     }
   };
 
@@ -194,21 +210,22 @@ export default function CorteCajaView({
 
             <button
               type="submit"
+              disabled={isSubmitting}
               style={{
                 width: '100%',
-                backgroundColor: 'var(--terracotta)',
+                backgroundColor: isSubmitting ? '#CCC' : 'var(--terracotta)',
                 color: '#FFF',
                 border: 'none',
                 padding: '12px',
                 borderRadius: '10px',
                 fontSize: '1rem',
                 fontWeight: 800,
-                cursor: 'pointer',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
                 boxShadow: 'var(--shadow-sm)',
                 marginTop: '6px'
               }}
             >
-              ABRIR CAJA E INICIAR TURNO
+              {isSubmitting ? 'ABRIENDO CAJA...' : 'ABRIR CAJA E INICIAR TURNO'}
             </button>
           </form>
         </div>
@@ -349,20 +366,21 @@ export default function CorteCajaView({
 
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
-                    backgroundColor: 'var(--dark-green)',
+                    backgroundColor: isSubmitting ? '#CCC' : 'var(--dark-green)',
                     color: '#FFF',
                     border: 'none',
                     padding: '12px',
                     borderRadius: '8px',
                     fontSize: '0.95rem',
                     fontWeight: 800,
-                    cursor: 'pointer',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
                     marginTop: '10px'
                   }}
                 >
-                  FINALIZAR Y CERRAR CORTE DE CAJA
+                  {isSubmitting ? 'CERRANDO TURNO...' : 'FINALIZAR Y CERRAR CORTE DE CAJA'}
                 </button>
               </div>
             </form>
