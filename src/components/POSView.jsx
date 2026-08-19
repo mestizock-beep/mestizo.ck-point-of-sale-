@@ -252,22 +252,30 @@ export default function POSView({
                     key={t.tableNumber}
                     onClick={() => onSelectTableForCheckout && onSelectTableForCheckout(t)}
                     style={{
-                      backgroundColor: isReadyToPay ? '#FF6F00' : 'var(--forest)',
-                      color: '#FFF',
-                      border: 'none',
+                      backgroundColor: isReadyToPay ? '#FF6F00' : 'var(--terracotta)',
+                      color: '#FFFFFF',
+                      border: isReadyToPay ? '2px solid #E65100' : '1px solid var(--terracotta-dark)',
                       borderRadius: '8px',
                       padding: '6px 12px',
-                      fontSize: '0.82rem',
+                      fontSize: '0.85rem',
                       fontWeight: 800,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: 'var(--shadow-sm)'
+                      gap: '8px',
+                      boxShadow: 'var(--shadow-sm)',
+                      transition: 'transform 0.1s ease'
                     }}
                   >
                     <span>Mesa {t.tableNumber}: ${tableSubtotal.toFixed(2)}</span>
-                    <span style={{ backgroundColor: 'rgba(255,255,255,0.25)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.72rem' }}>
+                    <span style={{
+                      backgroundColor: isReadyToPay ? '#E65100' : 'rgba(0,0,0,0.2)',
+                      color: '#FFFFFF',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontSize: '0.74rem',
+                      fontWeight: 700
+                    }}>
                       {isReadyToPay ? '💳 Pagar Cuenta' : 'Cobrar'}
                     </span>
                   </button>
