@@ -474,8 +474,9 @@ export default function TableManagementView({
             backgroundColor: '#FFFFFF',
             borderRadius: 'var(--radius-lg)',
             width: '100%',
-            maxWidth: '900px',
-            maxHeight: '92vh',
+            maxWidth: '920px',
+            height: '86vh',
+            maxHeight: '86vh',
             boxShadow: 'var(--shadow-lg)',
             border: '1px solid var(--sand-border)',
             display: 'flex',
@@ -485,12 +486,13 @@ export default function TableManagementView({
             
             {/* Modal Header */}
             <div style={{
-              padding: '1.25rem 1.5rem',
+              padding: '1rem 1.25rem',
               borderBottom: '1px solid var(--sand-border)',
               backgroundColor: 'var(--sand-muted)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexShrink: 0
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Utensils size={24} color="var(--terracotta)" />
@@ -505,6 +507,29 @@ export default function TableManagementView({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {selectedTable.items.length > 0 && (
+                  <button
+                    onClick={handleSendToCheckoutCashier}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      backgroundColor: 'var(--forest)',
+                      color: '#FFF',
+                      fontSize: '0.86rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(46, 125, 50, 0.3)'
+                    }}
+                  >
+                    <CreditCard size={15} />
+                    <span>COBRAR EN CAJA</span>
+                  </button>
+                )}
+
                 {selectedTable.items.length > 0 && (
                   <button
                     onClick={() => handleFreeTable(selectedTable.tableNumber)}

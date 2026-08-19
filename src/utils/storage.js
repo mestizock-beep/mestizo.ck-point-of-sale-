@@ -508,14 +508,23 @@ export const sendOrderToKitchenAndBar = (tableNumber, waiterName, itemsToDispatc
   const currentTickets = getKitchenTickets();
   const timestamp = new Date().toISOString();
 
-  // Separate kitchen items (food) vs bar items (drinks, cocktails, beers)
-  const isDrinkCategory = (category = '') => {
-    const cat = category.toLowerCase();
-    return cat.includes('miche') || cat.includes('coctel') || cat.includes('chela') || cat.includes('cerveza') || cat.includes('bebida') || cat.includes('trago') || cat.includes('refresco');
+  // Separate kitchen items (food) vs bar items (drinks, cocktails, beers, mezcalitas, cantaritos)
+  const isDrinkItem = (item) => {
+    const cat = (item.category || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const name = (item.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const barKeywords = [
+      'miche', 'coctel', 'chela', 'cerveza', 'bebida', 'trago', 'refresco',
+      'mezcal', 'cantarito', 'mojito', 'paloma', 'azulito', 'margarita',
+      'caguama', 'shot', 'gin', 'whisky', 'ron', 'vodka', 'tequila',
+      'boing', 'agua', 'jugo', 'sin alcohol', 'bar', 'barra'
+    ];
+
+    return barKeywords.some(keyword => cat.includes(keyword) || name.includes(keyword));
   };
 
-  const kitchenItems = itemsToDispatch.filter(item => !isDrinkCategory(item.category));
-  const barItems = itemsToDispatch.filter(item => isDrinkCategory(item.category));
+  const kitchenItems = itemsToDispatch.filter(item => !isDrinkItem(item));
+  const barItems = itemsToDispatch.filter(item => isDrinkItem(item));
 
   const newTickets = [...currentTickets];
 
