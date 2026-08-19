@@ -730,10 +730,10 @@ export default function TableManagementView({
               </div>
 
               {/* Right Column: Table Account Summary */}
-              <div style={{ flex: '1 1 45%', padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', backgroundColor: '#FFF' }}>
+              <div style={{ flex: '1 1 45%', padding: '1rem', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', backgroundColor: '#FFF' }}>
                 
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--dark-text)' }}>
+                <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--dark-text)', flexShrink: 0 }}>
                     Detalle de Consumo ({selectedTable.items.reduce((sum, i) => sum + i.quantity, 0)} ítems)
                   </h3>
 
@@ -742,7 +742,7 @@ export default function TableManagementView({
                       La mesa está vacía. Haz clic en los platillos o bebidas de la izquierda para agregar.
                     </p>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
                       {selectedTable.items.map((item, idx) => {
                         const dispatchedQty = item.dispatchedQuantity || 0;
                         const pendingQty = Math.max(0, item.quantity - dispatchedQty);
@@ -837,8 +837,8 @@ export default function TableManagementView({
                 </div>
 
                 {/* Subtotal & Actions */}
-                <div style={{ borderTop: '1px solid var(--sand-border)', paddingTop: '1rem', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 800 }}>
+                <div style={{ borderTop: '1px solid var(--sand-border)', paddingTop: '0.85rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: 800 }}>
                     <span>TOTAL MESA:</span>
                     <span style={{ color: 'var(--terracotta)' }}>
                       ${selectedTable.items.reduce((sum, i) => sum + (i.price * i.quantity), 0).toFixed(2)}
@@ -858,11 +858,11 @@ export default function TableManagementView({
                             disabled={selectedTable.items.length === 0 || pendingCount === 0}
                             style={{
                               flex: 1,
-                              backgroundColor: pendingCount > 0 ? 'var(--terracotta)' : '#A5D6A7',
-                              color: '#FFF',
+                              backgroundColor: pendingCount > 0 ? 'var(--terracotta)' : '#C8E6C9',
+                              color: pendingCount > 0 ? '#FFF' : '#2E7D32',
                               border: 'none',
-                              padding: '10px',
-                              borderRadius: '8px',
+                              padding: '11px 8px',
+                              borderRadius: '9px',
                               fontWeight: 800,
                               fontSize: '0.82rem',
                               cursor: (selectedTable.items.length === 0 || pendingCount === 0) ? 'not-allowed' : 'pointer',
@@ -874,7 +874,7 @@ export default function TableManagementView({
                           >
                             <Send size={15} />
                             <span>
-                              {pendingCount > 0 ? `ENVIAR NUEVOS (${pendingCount})` : '✓ TODO ENVIADO A COCINA'}
+                              {pendingCount > 0 ? `ENVIAR NUEVOS (${pendingCount})` : '✓ COMANDAS ENVIADAS'}
                             </span>
                           </button>
 
@@ -887,19 +887,20 @@ export default function TableManagementView({
                               backgroundColor: 'var(--forest)',
                               color: '#FFF',
                               border: 'none',
-                              padding: '10px',
-                              borderRadius: '8px',
+                              padding: '11px 8px',
+                              borderRadius: '9px',
                               fontWeight: 800,
-                              fontSize: '0.82rem',
+                              fontSize: '0.86rem',
                               cursor: selectedTable.items.length === 0 ? 'not-allowed' : 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: '6px'
+                              gap: '6px',
+                              boxShadow: '0 2px 6px rgba(46, 125, 50, 0.3)'
                             }}
                           >
-                            <CreditCard size={15} />
-                            <span>COBRAR EN CAJA</span>
+                            <CreditCard size={16} />
+                            <span>💳 COBRAR EN CAJA</span>
                           </button>
                         </div>
 
