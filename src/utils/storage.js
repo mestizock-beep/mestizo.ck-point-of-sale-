@@ -9,7 +9,8 @@ const KEYS = {
   SHIFT_HISTORY: 'mestizo_pos_shift_history',
   PRINTER: 'mestizo_pos_printer_settings',
   TABLE_ORDERS: 'mestizo_pos_table_orders',
-  KITCHEN_TICKETS: 'mestizo_pos_kitchen_tickets'
+  KITCHEN_TICKETS: 'mestizo_pos_kitchen_tickets',
+  PRESET_TAGS: 'mestizo_pos_preset_tags'
 };
 
 const INITIAL_TABLES = Array.from({ length: 20 }, (_, i) => ({
@@ -592,3 +593,17 @@ export const sendCancellationNoticeToKitchenAndBar = (tableNumber, waiterName, c
   return updatedTickets;
 };
 
+export const DEFAULT_PRESET_TAGS = {
+  general: ['Sin salsa', 'Salsa aparte', 'Para llevar', 'Bien cocido', 'Término medio', 'Sin sal', 'Extra salsa', 'Empaque individual'],
+  tacos: ['Sin cebolla', 'Sin cilantro', 'Con todo (Normal)', 'Limón extra', 'Salsa aparte', 'Doble tortilla', 'Para llevar'],
+  bebidas: ['Sin hielo', 'Poco hielo', 'Hielo extra', 'Sin popote', 'Sin azúcar', 'Con poco chile', 'Sin chile', 'Limón extra', 'Para llevar'],
+  botanas: ['Salsa aparte', 'Extra queso', 'Sin queso', 'Sin crema', 'Bien doradas', 'Sin sal', 'Para llevar']
+};
+
+export const getPresetTags = () => {
+  return getStorageItem(KEYS.PRESET_TAGS, DEFAULT_PRESET_TAGS);
+};
+
+export const savePresetTags = (tags) => {
+  setStorageItem(KEYS.PRESET_TAGS, tags);
+};

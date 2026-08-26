@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Utensils, Search, Plus, Minus, Trash2, Send, CreditCard, Clock, User, AlertCircle, CheckCircle2, MessageSquare, ChevronRight, RefreshCw, X, Printer, FileText } from 'lucide-react';
-import { sendOrderToKitchenAndBar, sendCancellationNoticeToKitchenAndBar, saveTableOrders, calculateProductPortions } from '../utils/storage';
+import { sendOrderToKitchenAndBar, sendCancellationNoticeToKitchenAndBar, saveTableOrders, calculateProductPortions, getPresetTags } from '../utils/storage';
 
 export default function TableManagementView({
   tables,
@@ -1007,24 +1007,33 @@ export default function TableManagementView({
 
             {/* Quick preset tags */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              {['Sin cebolla', 'Salsa aparte', 'Hielo extra', 'Sin hielo', 'Para llevar', 'Bien cocido'].map(tag => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => setNoteInput(prev => prev ? `${prev}, ${tag}` : tag)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--sand-border)',
-                    backgroundColor: 'var(--sand-bg)',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  +{tag}
-                </button>
-              ))}
+              {(() => {
+                const allTags = getPresetTags();
+                const combined = Array.from(new Set([
+                  ...(allTags.general || []),
+                  ...(allTags.tacos || []),
+                  ...(allTags.botanas || []),
+                  ...(allTags.bebidas || [])
+                ])).slice(0, 10);
+                return combined.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setNoteInput(prev => prev ? `${prev}, ${tag}` : tag)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--sand-border)',
+                      backgroundColor: 'var(--sand-bg)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    +{tag}
+                  </button>
+                ));
+              })()}
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button onClick={() => setItemNoteModal(null)} style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--sand-border)', background: '#FFF' }}>
@@ -1083,33 +1092,42 @@ export default function TableManagementView({
               </label>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {(quickAddProduct.category.toLowerCase().includes('miche') || quickAddProduct.category.toLowerCase().includes('coctel') || quickAddProduct.category.toLowerCase().includes('cerveza') || quickAddProduct.category.toLowerCase().includes('bebida') || quickAddProduct.category.toLowerCase().includes('alcohol')
-                  ? ['Sin hielo', 'Poco hielo', 'Con poco chile', 'Sin chile', 'Limón extra', 'Para llevar']
-                  : ['Sin cebolla', 'Sin cilantro', 'Sin salsa', 'Salsa aparte', 'Con todo (Normal)', 'Limón extra', 'Bien cocido', 'Para llevar']
-                ).map(chip => {
-                  const isSelected = selectedChips.includes(chip);
-                  return (
-                    <button
-                      key={chip}
-                      type="button"
-                      onClick={() => toggleChip(chip)}
-                      style={{
-                        padding: '8px 14px',
-                        borderRadius: '20px',
-                        border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
-                        backgroundColor: isSelected ? 'var(--terracotta)' : 'var(--sand-bg)',
-                        color: isSelected ? '#FFFFFF' : 'var(--dark-text)',
-                        fontSize: '0.85rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {isSelected ? `✓ ${chip}` : chip}
-                    </button>
-                  );
-                })}
+                {(() => {
+                  const allTags = getPresetTags();
+                  const cat = (quickAddProduct.category || '').toLowerCase();
+                  let categoryTags = allTags.general || [];
+                  if (cat.includes('miche') || cat.includes('coctel') || cat.includes('cerveza') || cat.includes('bebida') || cat.includes('alcohol')) {
+                    categoryTags = allTags.bebidas || [];
+                  } else if (cat.includes('papa') || cat.includes('botana') || cat.includes('entrada')) {
+                    categoryTags = allTags.botanas || [];
+                  } else if (cat.includes('taco') || cat.includes('fuerte') || cat.includes('torta') || cat.includes('comida') || cat.includes('plato')) {
+                    categoryTags = allTags.tacos || [];
+                  }
+                  return categoryTags.map(chip => {
+                    const isSelected = selectedChips.includes(chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleChip(chip)}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '20px',
+                          border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                          backgroundColor: isSelected ? 'var(--terracotta)' : 'var(--sand-bg)',
+                          color: isSelected ? '#FFFFFF' : 'var(--dark-text)',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {isSelected ? `✓ ${chip}` : chip}
+                      </button>
+                    );
+                  });
+                })()}
               </div>
             </div>
 

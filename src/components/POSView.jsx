@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, Percent, DollarSign, MessageSquare, AlertCircle, CheckCircle, ArrowRight, X, Receipt, Clock } from 'lucide-react';
-import { getSales, calculateProductPortions } from '../utils/storage';
+import { getSales, calculateProductPortions, getPresetTags } from '../utils/storage';
 
 export default function POSView({
   products,
@@ -861,24 +861,33 @@ export default function POSView({
 
             {/* Quick preset tags */}
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              {['Sin cebolla', 'Salsa aparte', 'Hielo extra', 'Sin hielo', 'Para llevar', 'Bien cocido'].map(tag => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => setNoteInput(prev => prev ? `${prev}, ${tag}` : tag)}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--sand-border)',
-                    backgroundColor: 'var(--sand-bg)',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  +{tag}
-                </button>
-              ))}
+              {(() => {
+                const allTags = getPresetTags();
+                const combined = Array.from(new Set([
+                  ...(allTags.general || []),
+                  ...(allTags.tacos || []),
+                  ...(allTags.botanas || []),
+                  ...(allTags.bebidas || [])
+                ])).slice(0, 10);
+                return combined.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setNoteInput(prev => prev ? `${prev}, ${tag}` : tag)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--sand-border)',
+                      backgroundColor: 'var(--sand-bg)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    +{tag}
+                  </button>
+                ));
+              })()}
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck, BarChart3, Usb, Sparkles } from 'lucide-react';
+import { Settings, Lock, User, Key, Printer, Shield, CheckCircle, AlertCircle, X, LogOut, Save, UserPlus, Users, Trash2, ShieldCheck, BarChart3, Usb, Sparkles, Tag, Plus, RotateCcw } from 'lucide-react';
 import { supabase, isSupabaseConfigured, signUpWithEmail } from '../utils/supabaseClient';
-import { getSales, getShiftHistory, getProducts } from '../utils/storage';
+import { getSales, getShiftHistory, getProducts, getPresetTags, savePresetTags, DEFAULT_PRESET_TAGS } from '../utils/storage';
 import { getSavedUSBPrinterInfo, connectUSBPrinter, disconnectUSBPrinter, printUSBTestTicket } from '../utils/usbPrinter';
 import { getGeminiApiKey, saveGeminiApiKey } from '../utils/aiEngine';
 import ReportsView from './ReportsView';
@@ -37,6 +37,53 @@ export default function SettingsModal({
   // Gemini AI Settings state
   const [geminiKeyInput, setGeminiKeyInput] = useState(() => getGeminiApiKey());
   const [aiKeyStatus, setAiKeyStatus] = useState(null);
+
+  // Preset Modification Tags state
+  const [presetTags, setPresetTags] = useState(() => getPresetTags());
+  const [activeTagCategory, setActiveTagCategory] = useState('tacos');
+  const [newTagInput, setNewTagInput] = useState('');
+  const [tagStatusMsg, setTagStatusMsg] = useState(null);
+
+  const handleAddTag = (e) => {
+    e.preventDefault();
+    const tagText = newTagInput.trim();
+    if (!tagText) return;
+
+    const currentCatTags = presetTags[activeTagCategory] || [];
+    if (currentCatTags.some(t => t.toLowerCase() === tagText.toLowerCase())) {
+      setTagStatusMsg({ type: 'error', text: `La etiqueta "${tagText}" ya existe en esta categoría.` });
+      setTimeout(() => setTagStatusMsg(null), 3000);
+      return;
+    }
+
+    const updated = {
+      ...presetTags,
+      [activeTagCategory]: [...currentCatTags, tagText]
+    };
+    setPresetTags(updated);
+    savePresetTags(updated);
+    setNewTagInput('');
+    setTagStatusMsg({ type: 'success', text: `Etiqueta "${tagText}" agregada correctamente.` });
+    setTimeout(() => setTagStatusMsg(null), 2500);
+  };
+
+  const handleDeleteTag = (category, tagToDelete) => {
+    const updated = {
+      ...presetTags,
+      [category]: (presetTags[category] || []).filter(t => t !== tagToDelete)
+    };
+    setPresetTags(updated);
+    savePresetTags(updated);
+  };
+
+  const handleResetTags = () => {
+    if (confirm('¿Restablecer todas las etiquetas de notas a los valores oficiales de fábrica?')) {
+      setPresetTags(DEFAULT_PRESET_TAGS);
+      savePresetTags(DEFAULT_PRESET_TAGS);
+      setTagStatusMsg({ type: 'success', text: 'Etiquetas restablecidas por defecto.' });
+      setTimeout(() => setTagStatusMsg(null), 2500);
+    }
+  };
 
   const handleSaveGeminiKey = (e) => {
     e.preventDefault();
@@ -337,6 +384,28 @@ export default function SettingsModal({
               <span>Gestión de Personal</span>
             </button>
           )}
+
+          <button
+            onClick={() => setActiveTab('tags')}
+            style={{
+              flex: 1,
+              padding: '12px 8px',
+              border: 'none',
+              borderBottom: activeTab === 'tags' ? '3px solid var(--terracotta)' : '3px solid transparent',
+              backgroundColor: activeTab === 'tags' ? '#FFF' : 'transparent',
+              color: activeTab === 'tags' ? 'var(--terracotta)' : 'var(--dark-subdued)',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Tag size={16} />
+            <span>Modificadores & Notas</span>
+          </button>
 
           <button
             onClick={() => setActiveTab('printer')}
@@ -1068,6 +1137,182 @@ export default function SettingsModal({
                 <span>Guardar Configuración de IA</span>
               </button>
             </form>
+          )}
+
+          {activeTab === 'tags' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ backgroundColor: 'var(--sand-bg)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--sand-border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Tag size={20} color="var(--terracotta)" />
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--dark-text)' }}>
+                    Personalización de Modificadores y Notas Rápidas
+                  </h4>
+                </div>
+                <p style={{ fontSize: '0.84rem', color: 'var(--dark-subdued)', lineHeight: 1.4 }}>
+                  Agrega o elimina los botones de modificación que aparecen en mesas y pedidos (por ejemplo: quitar <em>"Sin cebolla"</em> si el platillo no lo lleva, o agregar <em>"Extra salsa"</em>).
+                </p>
+              </div>
+
+              {tagStatusMsg && (
+                <div style={{
+                  backgroundColor: tagStatusMsg.type === 'success' ? 'var(--success-bg)' : 'var(--danger-bg)',
+                  color: tagStatusMsg.type === 'success' ? 'var(--success)' : 'var(--danger)',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <CheckCircle size={16} />
+                  <span>{tagStatusMsg.text}</span>
+                </div>
+              )}
+
+              {/* Category selector */}
+              <div>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--dark-text)', display: 'block', marginBottom: '6px' }}>
+                  Selecciona la Categoría de Platillos:
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'tacos', label: '🌮 Tacos & Platos Fuertes' },
+                    { id: 'botanas', label: '🍟 Papas, Entradas & Botanas' },
+                    { id: 'bebidas', label: '🍹 Bebidas, Chelitas & Cocteles' },
+                    { id: 'general', label: '✨ Modificadores Generales' }
+                  ].map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setActiveTagCategory(cat.id)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '20px',
+                        border: activeTagCategory === cat.id ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                        backgroundColor: activeTagCategory === cat.id ? 'var(--terracotta)' : '#FFF',
+                        color: activeTagCategory === cat.id ? '#FFF' : 'var(--dark-text)',
+                        fontSize: '0.85rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Current tags in category */}
+              <div style={{ backgroundColor: '#FAFAFA', padding: '1.25rem', borderRadius: '10px', border: '1px solid var(--sand-border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--dark-text)' }}>
+                    Etiquetas activas en esta categoría ({(presetTags[activeTagCategory] || []).length}):
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResetTags}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--dark-subdued)',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <RotateCcw size={13} />
+                    <span>Restablecer Fábrica</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', minHeight: '45px', alignItems: 'center' }}>
+                  {(presetTags[activeTagCategory] || []).length === 0 ? (
+                    <span style={{ fontSize: '0.82rem', color: 'var(--dark-subdued)', fontStyle: 'italic' }}>
+                      No hay modificadores en esta categoría. Puedes agregar los tuyos abajo.
+                    </span>
+                  ) : (
+                    (presetTags[activeTagCategory] || []).map(tag => (
+                      <span
+                        key={tag}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid var(--sand-border)',
+                          borderRadius: '16px',
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          color: 'var(--dark-text)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                        }}
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTag(activeTagCategory, tag)}
+                          title={`Eliminar etiqueta "${tag}"`}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--danger)',
+                            padding: '2px',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Add tag form */}
+              <form onSubmit={handleAddTag} style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  placeholder={`Nueva etiqueta (ej: "Sin queso", "Extra limón")...`}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--sand-border)',
+                    fontSize: '0.9rem'
+                  }}
+                />
+                <button
+                  type="submit"
+                  disabled={!newTagInput.trim()}
+                  style={{
+                    backgroundColor: 'var(--terracotta)',
+                    color: '#FFF',
+                    border: 'none',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: newTagInput.trim() ? 'pointer' : 'not-allowed',
+                    opacity: newTagInput.trim() ? 1 : 0.6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>Agregar</span>
+                </button>
+              </form>
+            </div>
           )}
 
           {activeTab === 'report' && (
