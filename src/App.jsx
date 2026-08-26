@@ -169,26 +169,46 @@ export default function App() {
 
     const matchedUser = registeredTeam.find(u => u.email.toLowerCase() === credentials.email.toLowerCase());
 
+    const authenticateLocally = () => {
+      if (matchedUser && matchedUser.password) {
+        if (matchedUser.password !== credentials.password) {
+          return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' };
+        }
+      }
+      const userRole = matchedUser ? matchedUser.role : (credentials.email.includes('admin') || credentials.email.includes('usiel') ? 'admin' : 'cajero');
+      const userObj = {
+        email: credentials.email,
+        fullName: matchedUser ? matchedUser.fullName : credentials.email.split('@')[0],
+        role: userRole
+      };
+      setCurrentUser(userObj);
+      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
+      return { success: true };
+    };
+
     if (isSupabaseConfigured) {
       try {
         const { data, error } = await signInWithEmail(credentials.email, credentials.password);
         
         if (error) {
-          if (error.message && error.message.toLowerCase().includes('api key')) {
-            // Local check if password matches matchedUser or admin default
-            if (matchedUser && matchedUser.password && matchedUser.password !== credentials.password) {
-              return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' };
-            }
-            const userRole = matchedUser ? matchedUser.role : (credentials.email.includes('admin') || credentials.email.includes('usiel') ? 'admin' : 'cajero');
-            const userObj = {
-              email: credentials.email,
-              fullName: matchedUser ? matchedUser.fullName : credentials.email.split('@')[0],
-              role: userRole
-            };
-            setCurrentUser(userObj);
-            localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-            return { success: true };
+          const errMsg = (error.message || '').toLowerCase();
+          const isNetworkOrConfigError = 
+            errMsg.includes('failed to fetch') || 
+            errMsg.includes('load failed') || 
+            errMsg.includes('network') || 
+            errMsg.includes('api key') ||
+            errMsg.includes('fetch');
+
+          // If network / config error, fallback seamlessly to local credentials
+          if (isNetworkOrConfigError) {
+            return authenticateLocally();
           }
+
+          // If user exists in local registered team and password matches, allow local login
+          if (matchedUser && matchedUser.password === credentials.password) {
+            return authenticateLocally();
+          }
+
           return { error: error.message || 'Credenciales incorrectas. Verifica tu contraseña.' };
         }
 
@@ -202,23 +222,15 @@ export default function App() {
         localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
         return { success: true };
       } catch (err) {
+        // In case of any unhandled network exception like "TypeError: Load failed"
+        const errMsg = (err.message || '').toLowerCase();
+        if (errMsg.includes('load failed') || errMsg.includes('failed to fetch') || errMsg.includes('network') || matchedUser) {
+          return authenticateLocally();
+        }
         return { error: err.message || 'Error de conexión al verificar credenciales.' };
       }
     } else {
-      // Local auth validation
-      if (matchedUser && matchedUser.password && matchedUser.password !== credentials.password) {
-        return { error: 'Contraseña incorrecta. Inténtalo de nuevo.' };
-      }
-
-      const userRole = matchedUser ? matchedUser.role : (credentials.email.includes('admin') || credentials.email.includes('usiel') ? 'admin' : 'cajero');
-      const userObj = {
-        email: credentials.email,
-        fullName: matchedUser ? matchedUser.fullName : credentials.email.split('@')[0],
-        role: userRole
-      };
-      setCurrentUser(userObj);
-      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(userObj));
-      return { success: true };
+      return authenticateLocally();
     }
   };
 
