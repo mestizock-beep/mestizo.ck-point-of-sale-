@@ -14,8 +14,8 @@ export default function SettingsModal({
   onClose
 }) {
   const isAdmin = currentUser?.role === 'admin' ||
-                  (currentUser?.email && (currentUser.email.toLowerCase().includes('usiel') || currentUser.email.toLowerCase().includes('admin')));
-  const [activeTab, setActiveTab] = useState(isAdmin ? 'team' : 'security'); // Default to 'team' for admin so Usiel sees it immediately!
+                  (currentUser?.email && (currentUser.email.toLowerCase().includes('usiel') || currentUser.email.toLowerCase().includes('jeffrey') || currentUser.email.toLowerCase().includes('admin')));
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'team' : 'security'); // Default to 'team' for admin so Usiel and Jeffrey see it immediately!
 
   // Password Change state
   const [newPassword, setNewPassword] = useState('');
@@ -137,10 +137,26 @@ export default function SettingsModal({
   const [teamUsers, setTeamUsers] = useState(() => {
     try {
       const stored = localStorage.getItem('mestizo_pos_team_users');
-      return stored ? JSON.parse(stored) : [
-        { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Chi (Dueño)', password: 'Mestizo2026!', role: 'admin' },
+      if (stored) {
+        let parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          parsed = parsed.map(u => {
+            if (u.email?.toLowerCase() === 'usiel@restaurantemestizo.com' && u.fullName?.includes('Dueño')) {
+              return { ...u, fullName: 'Usiel Chi' };
+            }
+            return u;
+          });
+          if (!parsed.some(u => u.email?.toLowerCase() === 'jeffrey@restaurantemestizo.com')) {
+            parsed.unshift({ email: 'jeffrey@restaurantemestizo.com', fullName: 'Jeffrey Lee Rucker Bautista', password: 'Mestizo2026!', role: 'admin' });
+          }
+          return parsed;
+        }
+      }
+      return [
+        { email: 'usiel@restaurantemestizo.com', fullName: 'Usiel Chi', password: 'Mestizo2026!', role: 'admin' },
+        { email: 'jeffrey@restaurantemestizo.com', fullName: 'Jeffrey Lee Rucker Bautista', password: 'Mestizo2026!', role: 'admin' },
         { email: 'fer@restaurantemestizo.com', fullName: 'Fer Segura', password: 'FerSegura123@', role: 'cajero' },
-        { email: 'kaleb@restaurantemestizo.com', fullName: 'Kaleb (Mesero)', password: 'KalebMestizo123@', role: 'mesero' },
+        { email: 'kaleb@restaurantemestizo.com', fullName: 'Kaleb', password: 'KalebMestizo123@', role: 'mesero' },
         { email: 'roberto@restaurantemestizo.com', fullName: 'Roberto Chi', password: 'RobertoChi123@', role: 'cajero' },
         { email: 'cajero@restaurantemestizo.com', fullName: 'Cajero de Turno', password: 'Caja123456', role: 'cajero' }
       ];
@@ -716,7 +732,7 @@ export default function SettingsModal({
                     <option value="mesero">Mesero (Fer Segura, Kaleb - Toma de Comandas en Mesas)</option>
                     <option value="cocina">Cocina (Cocinero - Pantalla KDS)</option>
                     <option value="barra">Barra (Bartender - Pantalla BDS)</option>
-                    <option value="admin">Administrador (Usiel Chi - Acceso Total)</option>
+                    <option value="admin">Administrador (Acceso Total al Sistema)</option>
                   </select>
                 </div>
 
