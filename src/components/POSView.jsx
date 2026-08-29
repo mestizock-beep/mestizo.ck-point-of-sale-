@@ -162,13 +162,11 @@ export default function POSView({
     <div style={{
       display: 'flex',
       flexDirection: isMobile ? 'column' : 'row',
-      flexWrap: isMobile ? 'nowrap' : 'wrap',
-      alignItems: isMobile ? 'stretch' : 'flex-start',
       flex: 1,
-      minHeight: 'calc(100vh - 72px)',
+      height: isMobile ? 'auto' : 'calc(100vh - 72px)',
       gap: isMobile ? '0.75rem' : '1.25rem',
       padding: isMobile ? '0.75rem' : '1.25rem',
-      overflowY: 'auto',
+      overflow: isMobile ? 'auto' : 'hidden',
       paddingBottom: (isMobile && cart.length > 0 && mobileTab === 'menu') ? '80px' : (isMobile ? '0.75rem' : '1.25rem')
     }}>
       
@@ -219,9 +217,12 @@ export default function POSView({
       <div style={{
         flex: '1 1 0%',
         minWidth: 0,
+        height: isMobile ? 'auto' : '100%',
         display: (isMobile && mobileTab !== 'menu') ? 'none' : 'flex',
         flexDirection: 'column',
-        gap: '1rem'
+        gap: '1rem',
+        overflowY: isMobile ? 'visible' : 'auto',
+        paddingRight: isMobile ? '0' : '6px'
       }}>
         
         {/* Active Tables with Orders Banner for Fast Cashier Billing */}
@@ -236,7 +237,8 @@ export default function POSView({
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '8px',
-            boxShadow: 'var(--shadow-sm)'
+            boxShadow: 'var(--shadow-sm)',
+            flexShrink: 0
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#E65100', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -296,7 +298,8 @@ export default function POSView({
             alignItems: 'center',
             gap: '10px',
             fontSize: '0.9rem',
-            fontWeight: 600
+            fontWeight: 600,
+            flexShrink: 0
           }}>
             <AlertCircle size={20} />
             <span>Atención: La caja no está abierta actualmente. Abre el turno en la pestaña "Corte de Caja" para registrar ventas formalmente.</span>
@@ -310,7 +313,8 @@ export default function POSView({
           boxShadow: 'var(--shadow-sm)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.85rem'
+          gap: '0.85rem',
+          flexShrink: 0
         }}>
           <div style={{ position: 'relative', width: '100%' }}>
             <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--dark-subdued)' }} />
@@ -376,8 +380,7 @@ export default function POSView({
           display: 'grid',
           gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(135px, 1fr))' : 'repeat(auto-fill, minmax(180px, 1fr))',
           gap: isMobile ? '0.75rem' : '1rem',
-          overflowY: 'auto',
-          paddingRight: '4px'
+          paddingBottom: '1rem'
         }}>
           {filteredProducts.map(product => {
             const availableStock = calculateProductPortions(product, insumos);
@@ -485,20 +488,26 @@ export default function POSView({
         </div>
       </div>
 
-      {/* Right Column: Comanda Actual Sidebar */}
+      {/* Right Column: Comanda Actual & Ventas Sidebar */}
       <div style={{
-        width: isMobile ? '100%' : '340px',
+        width: isMobile ? '100%' : '380px',
         flexShrink: 0,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 'var(--radius-md)',
-        boxShadow: 'var(--shadow-md)',
-        border: '1px solid var(--sand-border)',
+        height: isMobile ? 'auto' : '100%',
         display: (isMobile && mobileTab !== 'cart') ? 'none' : 'flex',
         flexDirection: 'column',
-        height: isMobile ? 'auto' : 'calc(100vh - 96px)',
-        position: isMobile ? 'static' : 'sticky',
-        top: '80px'
+        gap: '1rem',
+        overflowY: isMobile ? 'visible' : 'auto'
       }}>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-md)',
+          border: '1px solid var(--sand-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: '380px'
+        }}>
         <div style={{
           padding: '1.25rem',
           borderBottom: '1px solid var(--sand-border)',
@@ -772,6 +781,98 @@ export default function POSView({
         )}
       </div>
 
+      {/* ===== VENTAS DEL DÍA (Dentro de la barra lateral derecha) ===== */}
+      {!isMobile && (() => {
+        const allSales = getSales();
+        const today = new Date();
+        const todaySales = allSales.filter(s => {
+          const d = new Date(s.timestamp || s.createdAt);
+          return d.getFullYear() === today.getFullYear() &&
+                 d.getMonth() === today.getMonth() &&
+                 d.getDate() === today.getDate();
+        });
+        const todayTotal = todaySales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
+
+        return (
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid var(--sand-border)',
+            overflow: 'hidden',
+            flexShrink: 0,
+            marginTop: '1rem'
+          }}>
+            <div style={{
+              padding: '0.75rem 1rem',
+              backgroundColor: 'var(--sand-muted)',
+              borderBottom: '1px solid var(--sand-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Receipt size={16} color="var(--terracotta)" />
+                <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--dark-text)' }}>
+                  Ventas del Día
+                </span>
+                <span style={{
+                  backgroundColor: 'var(--terracotta)', color: '#FFF',
+                  fontSize: '0.7rem', fontWeight: 800,
+                  padding: '2px 7px', borderRadius: '20px'
+                }}>
+                  {todaySales.length}
+                </span>
+              </div>
+              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--forest)' }}>
+                ${todayTotal.toFixed(2)}
+              </span>
+            </div>
+
+            {todaySales.length === 0 ? (
+              <div style={{ padding: '1.25rem 1rem', textAlign: 'center', color: 'var(--dark-subdued)', fontSize: '0.82rem' }}>
+                <Receipt size={28} strokeWidth={1} color="var(--sand-border)" style={{ marginBottom: '6px' }} />
+                <p style={{ fontWeight: 600 }}>Aún no hay ventas registradas hoy</p>
+                <p style={{ fontSize: '0.74rem', marginTop: '2px', opacity: 0.7 }}>Aparecerán aquí al completar cobros.</p>
+              </div>
+            ) : (
+              <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                  <tbody>
+                    {todaySales.slice(0, 10).map((sale, idx) => {
+                      const saleDate = new Date(sale.timestamp || sale.createdAt);
+                      const timeStr = saleDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                      const methodColors = {
+                        'Efectivo': { bg: '#E8F5E9', color: '#2E7D32' },
+                        'Tarjeta': { bg: '#E3F2FD', color: '#1565C0' },
+                        'Transferencia': { bg: '#FFF8E1', color: '#E65100' }
+                      };
+                      const mc = methodColors[sale.paymentMethod] || { bg: 'var(--sand-bg)', color: 'var(--dark-text)' };
+
+                      return (
+                        <tr key={sale.id} style={{ borderTop: '1px solid var(--sand-border)', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : 'var(--sand-bg)' }}>
+                          <td style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--terracotta)', fontFamily: 'monospace' }}>#{sale.id}</td>
+                          <td style={{ padding: '6px 8px', color: 'var(--dark-subdued)' }}>{timeStr}</td>
+                          <td style={{ padding: '6px 8px' }}>
+                            <span style={{ backgroundColor: mc.bg, color: mc.color, padding: '2px 6px', borderRadius: '10px', fontWeight: 700, fontSize: '0.7rem' }}>
+                              {sale.paymentMethod}
+                            </span>
+                          </td>
+                          <td style={{ padding: '6px 10px', fontWeight: 800, color: 'var(--forest)', textAlign: 'right' }}>
+                            ${Number(sale.total).toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+      </div>
+
       {/* Floating Bottom Cart Bar for Mobile */}
       {isMobile && mobileTab === 'menu' && cart.length > 0 && (
         <div
@@ -834,19 +935,23 @@ export default function POSView({
           zIndex: 100,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          padding: '1rem'
         }}>
           <div style={{
             backgroundColor: '#FFF',
+            borderRadius: '16px',
             padding: '1.5rem',
-            borderRadius: 'var(--radius-md)',
-            width: '360px',
+            width: '100%',
+            maxWidth: '400px',
             boxShadow: 'var(--shadow-lg)'
           }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.75rem' }}>Agregar nota especial al platillo</h3>
-            <input
-              type="text"
-              placeholder="Ej: Sin cebolla, extra salsa, etc."
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--dark-text)' }}>
+              Nota para la Comanda
+            </h3>
+            <textarea
+              rows={3}
+              placeholder="Ej: Sin cebolla, término medio, extra salsa..."
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               style={{
@@ -854,49 +959,21 @@ export default function POSView({
                 padding: '10px',
                 borderRadius: '8px',
                 border: '1px solid var(--sand-border)',
-                marginBottom: '0.75rem',
-                fontSize: '0.95rem'
+                marginBottom: '1rem',
+                fontSize: '0.9rem',
+                fontFamily: 'inherit'
               }}
             />
-
-            {/* Quick preset tags */}
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '1rem' }}>
-              {(() => {
-                const allTags = getPresetTags();
-                const combined = Array.from(new Set([
-                  ...(allTags.general || []),
-                  ...(allTags.tacos || []),
-                  ...(allTags.botanas || []),
-                  ...(allTags.bebidas || [])
-                ])).slice(0, 10);
-                return combined.map(tag => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setNoteInput(prev => prev ? `${prev}, ${tag}` : tag)}
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: '12px',
-                      border: '1px solid var(--sand-border)',
-                      backgroundColor: 'var(--sand-bg)',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    +{tag}
-                  </button>
-                ));
-              })()}
-            </div>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
-                onClick={() => setItemNoteModal(null)}
-                style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--sand-border)', background: '#FFF' }}
+                type="button"
+                onClick={() => { setItemNoteModal(null); setNoteInput(''); }}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--sand-border)', background: '#FFF', fontWeight: 700 }}
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={handleSaveNote}
                 style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: 'var(--terracotta)', color: '#FFF', fontWeight: 700 }}
               >
@@ -906,112 +983,6 @@ export default function POSView({
           </div>
         </div>
       )}
-
-      {/* ===== VENTAS DEL DÍA ===== */}
-      {!isMobile && (() => {
-        const allSales = getSales();
-        const today = new Date();
-        const todaySales = allSales.filter(s => {
-          const d = new Date(s.timestamp || s.createdAt);
-          return d.getFullYear() === today.getFullYear() &&
-                 d.getMonth() === today.getMonth() &&
-                 d.getDate() === today.getDate();
-        });
-        const todayTotal = todaySales.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
-
-        return (
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--sand-border)',
-            marginTop: '0',
-            overflow: 'hidden',
-            gridColumn: '1 / -1'
-          }}>
-            <div style={{
-              padding: '0.85rem 1.25rem',
-              backgroundColor: 'var(--sand-muted)',
-              borderBottom: '1px solid var(--sand-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Receipt size={18} color="var(--terracotta)" />
-                <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--dark-text)' }}>
-                  Ventas del Día
-                </span>
-                <span style={{
-                  backgroundColor: 'var(--terracotta)', color: '#FFF',
-                  fontSize: '0.72rem', fontWeight: 800,
-                  padding: '2px 8px', borderRadius: '20px'
-                }}>
-                  {todaySales.length} venta{todaySales.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--forest)' }}>
-                Total del día: ${todayTotal.toFixed(2)}
-              </span>
-            </div>
-
-            {todaySales.length === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--dark-subdued)', fontSize: '0.88rem' }}>
-                <Receipt size={36} strokeWidth={1} color="var(--sand-border)" style={{ marginBottom: '8px' }} />
-                <p>Aún no hay ventas registradas hoy.</p>
-                <p style={{ fontSize: '0.78rem', marginTop: '4px', opacity: 0.7 }}>Las ventas aparecerán aquí en tiempo real al completar cobros.</p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: 'var(--sand-bg)', textAlign: 'left' }}>
-                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Ticket</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Hora</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Cliente / Mesa</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Platillos</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>Método</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--dark-subdued)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em', textAlign: 'right' }}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {todaySales.map((sale, idx) => {
-                      const saleDate = new Date(sale.timestamp || sale.createdAt);
-                      const timeStr = saleDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-                      const itemNames = (sale.items || []).map(i => `${i.quantity}x ${i.name}`).join(', ');
-                      const methodColors = {
-                        'Efectivo': { bg: '#E8F5E9', color: '#2E7D32' },
-                        'Tarjeta': { bg: '#E3F2FD', color: '#1565C0' },
-                        'Transferencia': { bg: '#FFF8E1', color: '#E65100' }
-                      };
-                      const mc = methodColors[sale.paymentMethod] || { bg: 'var(--sand-bg)', color: 'var(--dark-text)' };
-
-                      return (
-                        <tr key={sale.id} style={{ borderTop: '1px solid var(--sand-border)', backgroundColor: idx % 2 === 0 ? '#FFFFFF' : 'var(--sand-bg)' }}>
-                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--terracotta)', fontFamily: 'monospace' }}>{sale.id}</td>
-                          <td style={{ padding: '8px 12px', color: 'var(--dark-subdued)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Clock size={13} /> {timeStr}
-                          </td>
-                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{sale.customerName || 'Cliente General'}</td>
-                          <td style={{ padding: '8px 12px', maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--dark-subdued)' }}>{itemNames}</td>
-                          <td style={{ padding: '8px 12px' }}>
-                            <span style={{ backgroundColor: mc.bg, color: mc.color, padding: '2px 8px', borderRadius: '12px', fontWeight: 700, fontSize: '0.75rem' }}>
-                              {sale.paymentMethod}
-                            </span>
-                          </td>
-                          <td style={{ padding: '8px 12px', fontWeight: 800, color: 'var(--forest)', textAlign: 'right' }}>
-                            ${Number(sale.total).toFixed(2)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
     </div>
   );
