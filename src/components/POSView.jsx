@@ -220,9 +220,8 @@ export default function POSView({
         height: isMobile ? 'auto' : '100%',
         display: (isMobile && mobileTab !== 'menu') ? 'none' : 'flex',
         flexDirection: 'column',
-        gap: '1rem',
-        overflowY: isMobile ? 'visible' : 'auto',
-        paddingRight: isMobile ? '0' : '6px'
+        gap: '0.85rem',
+        overflow: 'hidden'
       }}>
         
         {/* Active Tables with Orders Banner for Fast Cashier Billing */}
@@ -231,7 +230,7 @@ export default function POSView({
             backgroundColor: '#FFF8E1',
             border: '1px solid #FFE082',
             borderRadius: 'var(--radius-md)',
-            padding: '0.85rem 1rem',
+            padding: '0.75rem 1rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -308,12 +307,12 @@ export default function POSView({
 
         <div style={{
           backgroundColor: '#FFFFFF',
-          padding: '1rem',
+          padding: '0.85rem 1rem',
           borderRadius: 'var(--radius-md)',
           boxShadow: 'var(--shadow-sm)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.85rem',
+          gap: '0.75rem',
           flexShrink: 0
         }}>
           <div style={{ position: 'relative', width: '100%' }}>
@@ -335,7 +334,7 @@ export default function POSView({
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px' }} className="no-scrollbar">
             {categories.map(cat => {
               const getEmoji = (c) => {
                 if (c === 'Botanas') return '🍟';
@@ -356,12 +355,12 @@ export default function POSView({
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   style={{
-                    padding: '8px 16px',
+                    padding: '6px 14px',
                     borderRadius: '20px',
                     border: selectedCategory === cat ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
                     backgroundColor: selectedCategory === cat ? 'var(--terracotta)' : 'var(--sand-bg)',
                     color: selectedCategory === cat ? '#FFFFFF' : 'var(--dark-text)',
-                    fontSize: '0.85rem',
+                    fontSize: '0.82rem',
                     fontWeight: 700,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
@@ -376,9 +375,14 @@ export default function POSView({
           </div>
         </div>
 
+        {/* Scrollable Products Area */}
         <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          paddingRight: '4px',
           display: 'grid',
           gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(135px, 1fr))' : 'repeat(auto-fill, minmax(180px, 1fr))',
+          gridAutoRows: 'max-content',
           gap: isMobile ? '0.75rem' : '1rem',
           paddingBottom: '1rem'
         }}>
