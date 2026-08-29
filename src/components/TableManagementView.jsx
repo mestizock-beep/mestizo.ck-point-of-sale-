@@ -909,9 +909,9 @@ export default function TableManagementView({
                             disabled={selectedTable.items.length === 0}
                             style={{
                               flex: 1,
-                              backgroundColor: 'var(--forest)',
-                              color: '#FFF',
-                              border: 'none',
+                              backgroundColor: selectedTable.items.length === 0 ? '#E2E8F0' : '#1E3A2B',
+                              color: selectedTable.items.length === 0 ? '#64748B' : '#FFFFFF',
+                              border: selectedTable.items.length === 0 ? '1px solid #CBD5E1' : 'none',
                               padding: '11px 8px',
                               borderRadius: '9px',
                               fontWeight: 800,
@@ -921,11 +921,11 @@ export default function TableManagementView({
                               alignItems: 'center',
                               justifyContent: 'center',
                               gap: '6px',
-                              boxShadow: '0 2px 6px rgba(46, 125, 50, 0.3)'
+                              boxShadow: selectedTable.items.length === 0 ? 'none' : '0 2px 6px rgba(30, 58, 43, 0.3)'
                             }}
                           >
                             <CreditCard size={16} />
-                            <span>💳 COBRAR EN CAJA</span>
+                            <span>COBRAR EN CAJA</span>
                           </button>
                         </div>
 

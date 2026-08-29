@@ -7,10 +7,11 @@ export default function CorteCajaView({
   onOpenShift,
   onCloseShift,
   onNavigateToPOS,
-  onNavigateToTables
+  onNavigateToTables,
+  currentUser
 }) {
   const [initialCashInput, setInitialCashInput] = useState(1000);
-  const [cashierNameInput, setCashierNameInput] = useState('Cajero Principal');
+  const [cashierNameInput, setCashierNameInput] = useState(currentUser?.fullName || 'Cajero Principal');
 
   const [actualCashInput, setActualCashInput] = useState('');
   const [shiftNotes, setShiftNotes] = useState('');

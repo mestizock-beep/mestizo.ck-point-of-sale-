@@ -46,203 +46,244 @@ export default function Header({
         overflowX: 'auto',
         maxWidth: '100%'
       }} className="no-scrollbar">
-        <button
-          onClick={() => setActiveTab('pos')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'pos' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'pos' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'pos' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <ShoppingBag size={18} />
-          <span>Venta Rápida</span>
-        </button>
+        {(() => {
+          const isCajaOpen = Boolean(currentShift && currentShift.isOpen);
+          const handleTabClick = (tabName) => {
+            if (!isCajaOpen && tabName !== 'corte') {
+              setActiveTab('corte');
+              return;
+            }
+            setActiveTab(tabName);
+          };
 
-        <button
-          onClick={() => setActiveTab('tables')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'tables' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'tables' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'tables' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Utensils size={18} />
-          <span>Mesas (20)</span>
-        </button>
+          return (
+            <>
+              <button
+                onClick={() => handleTabClick('pos')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'pos' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'pos' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'pos' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder a Venta Rápida' : ''}
+              >
+                <ShoppingBag size={18} />
+                <span>Venta Rápida</span>
+              </button>
 
-        <button
-          onClick={() => setActiveTab('kitchen')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'kitchen' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'kitchen' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'kitchen' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Flame size={18} />
-          <span>Cocina KDS</span>
-        </button>
+              <button
+                onClick={() => handleTabClick('tables')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'tables' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'tables' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'tables' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder a Mesas' : ''}
+              >
+                <Utensils size={18} />
+                <span>Mesas (20)</span>
+              </button>
 
-        <button
-          onClick={() => setActiveTab('bar')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'bar' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'bar' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'bar' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Wine size={18} />
-          <span>Barra BDS</span>
-        </button>
+              <button
+                onClick={() => handleTabClick('kitchen')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'kitchen' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'kitchen' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'kitchen' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder a Cocina' : ''}
+              >
+                <Flame size={18} />
+                <span>Cocina KDS</span>
+              </button>
 
-        <button
-          onClick={() => setActiveTab('inventory')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'inventory' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'inventory' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'inventory' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Package size={18} />
-          <span>Inventario</span>
-          {lowStockCount > 0 && (
-            <span
-              style={{
-                backgroundColor: 'var(--danger)',
-                color: '#FFF',
-                fontSize: '0.75rem',
-                padding: '2px 7px',
-                borderRadius: '10px',
-                fontWeight: 700
-              }}
-            >
-              {lowStockCount}
-            </span>
-          )}
-        </button>
+              <button
+                onClick={() => handleTabClick('bar')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'bar' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'bar' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'bar' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder al Bar' : ''}
+              >
+                <Wine size={18} />
+                <span>Barra BDS</span>
+              </button>
 
-        <button
-          onClick={() => setActiveTab('corte')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'corte' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'corte' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'corte' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Landmark size={18} />
-          <span>Corte de Caja</span>
-        </button>
+              <button
+                onClick={() => handleTabClick('inventory')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'inventory' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'inventory' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'inventory' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder a Inventario' : ''}
+              >
+                <Package size={18} />
+                <span>Inventario</span>
+                {lowStockCount > 0 && (
+                  <span
+                    style={{
+                      backgroundColor: 'var(--danger)',
+                      color: '#FFF',
+                      fontSize: '0.75rem',
+                      padding: '2px 7px',
+                      borderRadius: '10px',
+                      fontWeight: 700
+                    }}
+                  >
+                    {lowStockCount}
+                  </span>
+                )}
+              </button>
 
-        <button
-          onClick={() => setActiveTab('reports')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'reports' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'reports' ? '#FFFFFF' : 'var(--dark-subdued)',
-            boxShadow: activeTab === 'reports' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <BarChart3 size={18} />
-          <span>Reportes & Analytics</span>
-        </button>
+              <button
+                onClick={() => setActiveTab('corte')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: !isCajaOpen ? '2px solid var(--terracotta)' : 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'corte' ? 'var(--terracotta)' : (!isCajaOpen ? '#FFF3E0' : 'transparent'),
+                  color: activeTab === 'corte' ? '#FFFFFF' : (!isCajaOpen ? 'var(--terracotta)' : 'var(--dark-subdued)'),
+                  boxShadow: activeTab === 'corte' ? 'var(--shadow-sm)' : 'none'
+                }}
+              >
+                <Landmark size={18} />
+                <span>Corte de Caja</span>
+                {!isCajaOpen && (
+                  <span style={{
+                    backgroundColor: 'var(--terracotta)',
+                    color: '#FFF',
+                    fontSize: '0.7rem',
+                    padding: '2px 6px',
+                    borderRadius: '8px',
+                    fontWeight: 800
+                  }}>
+                    REQUERIDO
+                  </span>
+                )}
+              </button>
 
-        <button
-          onClick={() => setActiveTab('ai')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 14px',
-            borderRadius: '9px',
-            border: 'none',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.2s ease',
-            backgroundColor: activeTab === 'ai' ? 'var(--terracotta)' : 'transparent',
-            color: activeTab === 'ai' ? '#FFFFFF' : 'var(--terracotta)',
-            boxShadow: activeTab === 'ai' ? 'var(--shadow-sm)' : 'none'
-          }}
-        >
-          <Sparkles size={18} color={activeTab === 'ai' ? '#FFFFFF' : 'var(--terracotta)'} />
-          <span>Mestizo IA</span>
-        </button>
+              <button
+                onClick={() => handleTabClick('reports')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'reports' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'reports' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'reports' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder a Reportes' : ''}
+              >
+                <BarChart3 size={18} />
+                <span>Reportes & Analytics</span>
+              </button>
+
+              <button
+                onClick={() => handleTabClick('ai')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'ai' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'ai' ? '#FFFFFF' : 'var(--terracotta)',
+                  boxShadow: activeTab === 'ai' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para acceder a IA' : ''}
+              >
+                <Sparkles size={18} color={activeTab === 'ai' ? '#FFFFFF' : 'var(--terracotta)'} />
+                <span>Mestizo IA</span>
+              </button>
+            </>
+          );
+        })()}
       </nav>
 
       {/* Right Controls & Status Indicators */}

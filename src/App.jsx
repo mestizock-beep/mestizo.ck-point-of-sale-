@@ -370,6 +370,16 @@ export default function App() {
     setPrinterSettings(newSettings);
   };
 
+  // Auto-redirect to corte if caja is closed
+  useEffect(() => {
+    if (currentUser) {
+      const shift = getCurrentShift();
+      if (!shift || !shift.isOpen) {
+        setActiveTab('corte');
+      }
+    }
+  }, [currentUser]);
+
   if (checkingAuth) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--sand-bg)' }}>
@@ -381,6 +391,8 @@ export default function App() {
   if (!currentUser) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
+
+  const isCajaOpen = Boolean(currentShift && currentShift.isOpen);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -397,6 +409,45 @@ export default function App() {
         onLogout={handleLogout}
         onOpenSettings={() => setShowSettingsModal(true)}
       />
+
+      {/* Caja Closed Mandatory Alert Banner */}
+      {!isCajaOpen && (
+        <div style={{
+          backgroundColor: '#FFF3E0',
+          borderBottom: '1px solid #FFE0B2',
+          padding: '10px 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#D84315' }}>
+              Paso obligatorio: Debes abrir la caja e ingresar el fondo inicial para habilitar las ventas, mesas y módulos del restaurante.
+            </span>
+          </div>
+          {activeTab !== 'corte' && (
+            <button
+              onClick={() => setActiveTab('corte')}
+              style={{
+                backgroundColor: 'var(--terracotta)',
+                color: '#FFF',
+                border: 'none',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              Ir a Apertura de Caja →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Tab Content */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -474,6 +525,7 @@ export default function App() {
             onCloseShift={handleCloseShift}
             onNavigateToPOS={() => setActiveTab('pos')}
             onNavigateToTables={() => setActiveTab('tables')}
+            currentUser={currentUser}
           />
         )}
 
