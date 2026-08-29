@@ -450,7 +450,7 @@ export default function App() {
       )}
 
       {/* Main Tab Content */}
-      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: activeTab === 'pos' ? 'hidden' : 'auto' }}>
         {activeTab === 'pos' && (
           <POSView
             products={products}

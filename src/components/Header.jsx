@@ -18,7 +18,7 @@ export default function Header({
       style={{
         backgroundColor: '#FFFFFF',
         borderBottom: '1px solid var(--sand-border)',
-        padding: '0.75rem 1.5rem',
+        padding: '0.65rem 1.25rem',
         boxShadow: 'var(--shadow-sm)',
         position: 'sticky',
         top: 0,
@@ -26,12 +26,14 @@ export default function Header({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem'
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        gap: '0.85rem'
       }}
+      className="no-scrollbar"
     >
       {/* Brand & Emblem */}
-      <div style={{ cursor: 'pointer' }} onClick={() => setActiveTab('pos')}>
+      <div style={{ cursor: 'pointer', flexShrink: 0 }} onClick={() => setActiveTab('pos')}>
         <Logo size="sm" variant="terracotta" />
       </div>
 
