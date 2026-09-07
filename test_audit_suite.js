@@ -176,6 +176,28 @@ async function runAuditTestSuite() {
   assert(aiAnswer && aiAnswer.reply.includes('Resumen Financiero de Ventas'), 'Asistente de IA responde consultas en lenguaje natural');
 
   // -------------------------------------------------------------
+  // TEST 11: Persistencia de Ventas, Carrito y Mesas tras Reinicio
+  // -------------------------------------------------------------
+  console.log('\n--- 7. Pruebas de Persistencia Segura y Reinicio de Página ---');
+  
+  // Guardar carrito en vivo
+  const testCart = [{ id: 'p1', name: 'Taco Suadero', price: 35, quantity: 3 }];
+  storage.saveActiveCart(testCart);
+  assert(storage.getActiveCart().length === 1 && storage.getActiveCart()[0].quantity === 3, 'Carrito en vivo persiste en almacenamiento');
+
+  // Simular recarga total de la app (initStorage tras registrar ventas)
+  const salesBeforeReload = storage.getSales();
+  assert(salesBeforeReload.length > 0, 'Hay ventas registradas antes del reinicio');
+  
+  await storage.initStorage();
+  const salesAfterReload = storage.getSales();
+  assert(salesAfterReload.length === salesBeforeReload.length, `Ventas preservadas al 100% tras reinicio (${salesAfterReload.length} ventas)`);
+
+  // Verificar lista de meseros multi-usuario
+  const waiters = storage.getWaitersList();
+  assert(Array.isArray(waiters) && waiters.length >= 4, 'Múltiples perfiles de meseros disponibles sin restricciones');
+
+  // -------------------------------------------------------------
   // RESUMEN FINAL
   // -------------------------------------------------------------
   console.log('\n===========================================================');

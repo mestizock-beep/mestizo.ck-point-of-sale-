@@ -419,28 +419,85 @@ export default function TicketModal({
               {copied ? 'Copiado al portapapeles' : 'Copiar texto del ticket'}
             </button>
 
-            <div style={{ marginTop: 'auto', borderTop: '1px solid var(--sand-border)', paddingTop: '1rem' }}>
-              <button
-                onClick={onNewSale}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '10px',
-                  backgroundColor: 'var(--sand-muted)',
-                  color: 'var(--dark-text)',
-                  border: '1px solid var(--sand-border)',
-                  fontWeight: 800,
-                  fontSize: '0.95rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                <ArrowLeft size={18} />
-                Nueva Venta
-              </button>
+            <div style={{ marginTop: 'auto', borderTop: '1px solid var(--sand-border)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {saleData.tableNumber ? (
+                <>
+                  <button
+                    onClick={() => {
+                      if (onClose) onClose();
+                      if (onNewSale) onNewSale('tables');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '10px',
+                      backgroundColor: 'var(--terracotta)',
+                      color: '#FFF',
+                      border: 'none',
+                      fontWeight: 800,
+                      fontSize: '0.95rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(199, 91, 57, 0.25)'
+                    }}
+                  >
+                    <span>🍽️ Volver al Salón de Mesas</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (onClose) onClose();
+                      if (onNewSale) onNewSale('pos');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      borderRadius: '10px',
+                      backgroundColor: 'var(--sand-muted)',
+                      color: 'var(--dark-text)',
+                      border: '1px solid var(--sand-border)',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>🛒 Ir al Punto de Venta</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (onClose) onClose();
+                    if (onNewSale) onNewSale('pos');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    backgroundColor: 'var(--terracotta)',
+                    color: '#FFF',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(199, 91, 57, 0.25)'
+                  }}
+                >
+                  <ArrowLeft size={18} />
+                  <span>Nueva Venta en POS</span>
+                </button>
+              )}
             </div>
 
           </div>

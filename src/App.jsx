@@ -33,7 +33,10 @@ import {
   savePrinterSettings,
   resetToOfficialMenu,
   getTableOrders,
-  saveTableOrders
+  saveTableOrders,
+  getActiveCart,
+  saveActiveCart,
+  clearActiveCart
 } from './utils/storage';
 import { INITIAL_CATEGORIES } from './utils/initialData';
 import { supabase, isSupabaseConfigured, signInWithEmail, signUpWithEmail, signOutUser } from './utils/supabaseClient';
@@ -49,7 +52,7 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [insumos, setInsumos] = useState([]);
   const [sales, setSales] = useState([]);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => getActiveCart());
   const [tables, setTables] = useState([]);
   const [currentShift, setCurrentShift] = useState(null);
   const [shiftHistory, setShiftHistory] = useState([]);
@@ -141,6 +144,11 @@ export default function App() {
     setTables(newTables);
     saveTableOrders(newTables);
   };
+
+  // Keep cart persisted in storage
+  useEffect(() => {
+    saveActiveCart(cart);
+  }, [cart]);
 
   const handleLoginSuccess = async (credentials) => {
     if (!credentials.email || !credentials.password) {
@@ -267,29 +275,45 @@ export default function App() {
   };
 
   const handleCompleteSale = (salePayload) => {
-    const { newSale, updatedInsumos } = addSale(salePayload);
-    setSales(getSales());
-    setInsumos(updatedInsumos);
-    setCurrentShift(getCurrentShift());
-    setCart([]);
-    setCheckoutOrder(null);
-    setTicketSale(newSale);
+    try {
+      const { newSale, updatedInsumos } = addSale(salePayload);
+      
+      // Close checkout modal immediately
+      setCheckoutOrder(null);
+      setCart([]);
+      clearActiveCart();
 
-    // If the sale was for a Table, automatically free the table!
-    if (salePayload.tableNumber) {
-      const resetTable = {
-        id: salePayload.tableNumber,
-        tableNumber: salePayload.tableNumber,
-        name: `Mesa ${salePayload.tableNumber}`,
-        status: 'free',
-        waiterName: '',
-        items: [],
-        notes: '',
-        createdAt: null,
-        updatedAt: null
-      };
-      const updatedTables = tables.map(t => t.tableNumber === salePayload.tableNumber ? resetTable : t);
-      handleSaveTables(updatedTables);
+      // If the sale was for a Table, free the table immediately in storage & state!
+      if (salePayload.tableNumber) {
+        const tableNum = Number(salePayload.tableNumber);
+        const currentTables = getTableOrders();
+        const resetTable = {
+          id: tableNum,
+          tableNumber: tableNum,
+          name: `Mesa ${tableNum}`,
+          status: 'free',
+          waiterName: '',
+          items: [],
+          notes: '',
+          createdAt: null,
+          updatedAt: null
+        };
+        const updatedTables = currentTables.map(t => Number(t.tableNumber) === tableNum ? resetTable : t);
+        setTables(updatedTables);
+        saveTableOrders(updatedTables);
+      }
+
+      // Update financial & stock records
+      setSales(getSales());
+      setInsumos(updatedInsumos);
+      setCurrentShift(getCurrentShift());
+
+      // Open ticket modal with generated sale
+      setTicketSale(newSale);
+    } catch (err) {
+      console.error('Error al registrar venta:', err);
+      alert('Detalle al registrar la venta: ' + (err.message || 'Error desconocido'));
+      setCheckoutOrder(null);
     }
   };
 
@@ -567,10 +591,15 @@ export default function App() {
         <TicketModal
           saleData={ticketSale}
           printerSettings={printerSettings}
-          onClose={() => setTicketSale(null)}
-          onNewSale={() => {
+          onClose={() => {
             setTicketSale(null);
-            setActiveTab('pos');
+            if (ticketSale?.tableNumber) {
+              setActiveTab('tables');
+            }
+          }}
+          onNewSale={(targetTab = 'pos') => {
+            setTicketSale(null);
+            setActiveTab(targetTab || 'pos');
           }}
         />
       )}

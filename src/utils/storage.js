@@ -10,7 +10,9 @@ const KEYS = {
   PRINTER: 'mestizo_pos_printer_settings',
   TABLE_ORDERS: 'mestizo_pos_table_orders',
   KITCHEN_TICKETS: 'mestizo_pos_kitchen_tickets',
-  PRESET_TAGS: 'mestizo_pos_preset_tags'
+  PRESET_TAGS: 'mestizo_pos_preset_tags',
+  ACTIVE_CART: 'mestizo_pos_active_cart',
+  BACKUP_DATA: 'mestizo_pos_backup_data'
 };
 
 const INITIAL_TABLES = Array.from({ length: 20 }, (_, i) => ({
@@ -28,9 +30,18 @@ const INITIAL_TABLES = Array.from({ length: 20 }, (_, i) => ({
 const getStorageItem = (key, fallback) => {
   try {
     const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
+    if (!item) return fallback;
+    return JSON.parse(item);
   } catch (e) {
     console.error(`Error reading ${key} from localStorage`, e);
+    // Try to recover from backup if available
+    try {
+      const backupRaw = localStorage.getItem(KEYS.BACKUP_DATA);
+      if (backupRaw) {
+        const backup = JSON.parse(backupRaw);
+        if (backup && backup[key]) return backup[key];
+      }
+    } catch (_) {}
     return fallback;
   }
 };
@@ -38,6 +49,17 @@ const getStorageItem = (key, fallback) => {
 const setStorageItem = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    
+    // Save snapshot in backup for critical operational keys
+    if ([KEYS.SALES, KEYS.CURRENT_SHIFT, KEYS.SHIFT_HISTORY, KEYS.TABLE_ORDERS, KEYS.INSUMOS, KEYS.PRODUCTS].includes(key)) {
+      try {
+        const existingBackup = JSON.parse(localStorage.getItem(KEYS.BACKUP_DATA) || '{}');
+        existingBackup[key] = value;
+        existingBackup.lastBackupAt = new Date().toISOString();
+        localStorage.setItem(KEYS.BACKUP_DATA, JSON.stringify(existingBackup));
+      } catch (_) {}
+    }
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('mestizo_pos_storage_update', { detail: { key, value } }));
     }
@@ -83,8 +105,11 @@ export const calculateProductPortions = (product, insumosList = null) => {
 };
 
 export const initStorage = async () => {
-  if (!localStorage.getItem(KEYS.PRODUCTS) || !localStorage.getItem(KEYS.INSUMOS)) {
+  // 1. Initial local seeding only if completely absent
+  if (!localStorage.getItem(KEYS.PRODUCTS)) {
     setStorageItem(KEYS.PRODUCTS, INITIAL_PRODUCTS);
+  }
+  if (!localStorage.getItem(KEYS.INSUMOS)) {
     setStorageItem(KEYS.INSUMOS, INITIAL_INSUMOS);
   }
   if (!localStorage.getItem(KEYS.PRINTER)) {
@@ -103,7 +128,7 @@ export const initStorage = async () => {
     setStorageItem(KEYS.KITCHEN_TICKETS, []);
   }
 
-  // If Supabase is configured, pull initial cloud data
+  // 2. If Supabase is configured, pull initial cloud data with non-destructive merge
   if (isSupabaseConfigured) {
     await fetchCloudData();
   }
@@ -113,21 +138,33 @@ export const fetchCloudData = async () => {
   if (!isSupabaseConfigured) return;
 
   try {
-    // 1. Fetch Insumos
+    // 1. Insumos Merge
     const { data: cloudInsumos, error: insumosErr } = await supabase.from('insumos').select('*');
+    const localInsumos = getInsumos();
+
     if (!insumosErr && cloudInsumos && cloudInsumos.length > 0) {
-      const formatted = cloudInsumos.map(i => ({
+      const cloudMap = new Map(cloudInsumos.map(i => [i.id, {
         id: i.id,
         name: i.name,
         unit: i.unit,
         stock: Number(i.stock),
         minStock: Number(i.min_stock),
         yieldNote: i.yield_note || ''
-      }));
-      setStorageItem(KEYS.INSUMOS, formatted);
-    } else if (cloudInsumos && cloudInsumos.length === 0) {
-      // Seed initial insumos if cloud table is empty
-      const localInsumos = getInsumos();
+      }]));
+
+      // Keep local insumos and override/merge with cloud entries
+      const mergedInsumos = [...localInsumos];
+      cloudMap.forEach((cItem, cid) => {
+        const localIdx = mergedInsumos.findIndex(li => li.id === cid);
+        if (localIdx >= 0) {
+          mergedInsumos[localIdx] = { ...mergedInsumos[localIdx], ...cItem };
+        } else {
+          mergedInsumos.push(cItem);
+        }
+      });
+      setStorageItem(KEYS.INSUMOS, mergedInsumos);
+    } else if (localInsumos.length > 0) {
+      // Seed cloud from local if cloud table is empty
       const payload = localInsumos.map(i => ({
         id: i.id,
         name: i.name,
@@ -136,13 +173,15 @@ export const fetchCloudData = async () => {
         min_stock: i.minStock,
         yield_note: i.yieldNote || ''
       }));
-      await supabase.from('insumos').upsert(payload);
+      supabase.from('insumos').upsert(payload).catch(console.error);
     }
 
-    // 2. Fetch Products
+    // 2. Products Merge
     const { data: cloudProducts, error: productsErr } = await supabase.from('products').select('*');
+    const localProducts = getProducts();
+
     if (!productsErr && cloudProducts && cloudProducts.length > 0) {
-      const formatted = cloudProducts.map(p => ({
+      const cloudPMap = new Map(cloudProducts.map(p => [p.id, {
         id: p.id,
         sku: p.sku,
         name: p.name,
@@ -151,39 +190,86 @@ export const fetchCloudData = async () => {
         description: p.description || '',
         image: p.image || '',
         recipe: p.recipe || []
-      }));
-      setStorageItem(KEYS.PRODUCTS, formatted);
-    } else if (cloudProducts && cloudProducts.length === 0) {
-      // Seed initial products if cloud table is empty
-      const localProducts = getProducts();
-      await supabase.from('products').upsert(localProducts);
+      }]));
+
+      const mergedProducts = [...localProducts];
+      cloudPMap.forEach((cP, pid) => {
+        const localPIdx = mergedProducts.findIndex(lp => lp.id === pid);
+        if (localPIdx >= 0) {
+          mergedProducts[localPIdx] = { ...mergedProducts[localPIdx], ...cP };
+        } else {
+          mergedProducts.push(cP);
+        }
+      });
+      setStorageItem(KEYS.PRODUCTS, mergedProducts);
+    } else if (localProducts.length > 0) {
+      supabase.from('products').upsert(localProducts).catch(console.error);
     }
 
-    // 3. Fetch Sales
+    // 3. Sales Non-Destructive Merge (Never overwrite local sales with empty cloud array)
     const { data: cloudSales, error: salesErr } = await supabase.from('sales').select('*').order('created_at', { ascending: false });
+    const localSales = getSales();
+
     if (!salesErr && cloudSales) {
-      const formatted = cloudSales.map(s => ({
+      const formattedCloudSales = cloudSales.map(s => ({
         id: s.id,
-        timestamp: s.timestamp,
+        timestamp: s.timestamp || s.created_at,
         items: s.items || [],
         subtotal: Number(s.subtotal),
-        discountPercent: Number(s.discount_percent),
-        discountAmount: Number(s.discount_amount),
-        tipPercent: Number(s.tip_percent),
-        tipAmount: Number(s.tip_amount),
+        discountPercent: Number(s.discount_percent || 0),
+        discountAmount: Number(s.discount_amount || 0),
+        tipPercent: Number(s.tip_percent || 0),
+        tipAmount: Number(s.tip_amount || 0),
         total: Number(s.total),
         paymentMethod: s.payment_method,
         shiftId: s.shift_id
       }));
-      setStorageItem(KEYS.SALES, formatted);
+
+      // Combine local and cloud sales by unique ID
+      const salesMap = new Map();
+      // First insert cloud sales
+      formattedCloudSales.forEach(s => salesMap.set(s.id, s));
+      // Then merge local sales (so any local sale not yet in cloud is preserved!)
+      const unSyncedLocalSales = [];
+      localSales.forEach(s => {
+        if (!salesMap.has(s.id)) {
+          unSyncedLocalSales.push(s);
+        }
+        salesMap.set(s.id, s);
+      });
+
+      const mergedSales = Array.from(salesMap.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      setStorageItem(KEYS.SALES, mergedSales);
+
+      // Upload any local sales that were missing in Supabase
+      if (unSyncedLocalSales.length > 0) {
+        const uploadPayload = unSyncedLocalSales.map(s => ({
+          id: s.id,
+          timestamp: s.timestamp,
+          items: s.items || [],
+          subtotal: s.subtotal,
+          discount_percent: s.discountPercent || 0,
+          discount_amount: s.discountAmount || 0,
+          tip_percent: s.tipPercent || 0,
+          tip_amount: s.tipAmount || 0,
+          total: s.total,
+          payment_method: s.paymentMethod || 'Efectivo',
+          shift_id: s.shiftId || null
+        }));
+        supabase.from('sales').upsert(uploadPayload).catch(console.error);
+      }
     }
 
-    // 4. Fetch Shifts
+    // 4. Shifts Non-Destructive Merge
     const { data: cloudShifts, error: shiftsErr } = await supabase.from('shifts').select('*').order('opened_at', { ascending: false });
-    if (!shiftsErr && cloudShifts) {
+    const localCurrentShift = getCurrentShift();
+    const localShiftHistory = getShiftHistory();
+
+    if (!shiftsErr && cloudShifts && cloudShifts.length > 0) {
       const openShift = cloudShifts.find(s => s.is_open);
       const closedShifts = cloudShifts.filter(s => !s.is_open);
 
+      // If cloud has an open shift, use it; otherwise, preserve local open shift if active
       if (openShift) {
         setStorageItem(KEYS.CURRENT_SHIFT, {
           id: openShift.id,
@@ -198,27 +284,68 @@ export const fetchCloudData = async () => {
           totalTransfer: Number(openShift.total_transfer),
           sales: openShift.sales || []
         });
-      } else {
-        setStorageItem(KEYS.CURRENT_SHIFT, null);
+      } else if (localCurrentShift && localCurrentShift.isOpen) {
+        // Cloud has no open shift, push local open shift to cloud
+        supabase.from('shifts').upsert([{
+          id: localCurrentShift.id,
+          opened_at: localCurrentShift.openedAt,
+          cashier_name: localCurrentShift.cashierName,
+          initial_cash: localCurrentShift.initialCash,
+          is_open: true,
+          sales_count: localCurrentShift.salesCount,
+          total_revenue: localCurrentShift.totalRevenue,
+          total_cash: localCurrentShift.totalCash,
+          total_card: localCurrentShift.totalCard,
+          total_transfer: localCurrentShift.totalTransfer,
+          sales: localCurrentShift.sales
+        }]).catch(console.error);
       }
 
-      setStorageItem(KEYS.SHIFT_HISTORY, closedShifts.map(s => ({
-        id: s.id,
-        openedAt: s.opened_at,
-        closedAt: s.closed_at,
-        cashierName: s.cashier_name,
-        initialCash: Number(s.initial_cash),
-        isOpen: false,
-        salesCount: Number(s.sales_count),
-        totalRevenue: Number(s.total_revenue),
-        totalCash: Number(s.total_cash),
-        totalCard: Number(s.total_card),
-        totalTransfer: Number(s.total_transfer),
-        actualPhysicalCash: Number(s.actual_physical_cash),
-        expectedCash: Number(s.expected_cash),
-        discrepancy: Number(s.discrepancy),
-        notes: s.notes || ''
-      })));
+      // Merge shift history by ID
+      const shiftHistoryMap = new Map();
+      closedShifts.forEach(s => {
+        shiftHistoryMap.set(s.id, {
+          id: s.id,
+          openedAt: s.opened_at,
+          closedAt: s.closed_at,
+          cashierName: s.cashier_name,
+          initialCash: Number(s.initial_cash),
+          isOpen: false,
+          salesCount: Number(s.sales_count),
+          totalRevenue: Number(s.total_revenue),
+          totalCash: Number(s.total_cash),
+          totalCard: Number(s.total_card),
+          totalTransfer: Number(s.total_transfer),
+          actualPhysicalCash: Number(s.actual_physical_cash),
+          expectedCash: Number(s.expected_cash),
+          discrepancy: Number(s.discrepancy),
+          notes: s.notes || ''
+        });
+      });
+
+      localShiftHistory.forEach(s => {
+        if (!shiftHistoryMap.has(s.id)) {
+          shiftHistoryMap.set(s.id, s);
+        }
+      });
+
+      const mergedHistory = Array.from(shiftHistoryMap.values()).sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt));
+      setStorageItem(KEYS.SHIFT_HISTORY, mergedHistory);
+    } else if (localCurrentShift && localCurrentShift.isOpen) {
+      // Cloud is empty, push local shift
+      supabase.from('shifts').upsert([{
+        id: localCurrentShift.id,
+        opened_at: localCurrentShift.openedAt,
+        cashier_name: localCurrentShift.cashierName,
+        initial_cash: localCurrentShift.initialCash,
+        is_open: true,
+        sales_count: localCurrentShift.salesCount,
+        total_revenue: localCurrentShift.totalRevenue,
+        total_cash: localCurrentShift.totalCash,
+        total_card: localCurrentShift.totalCard,
+        total_transfer: localCurrentShift.totalTransfer,
+        sales: localCurrentShift.sales
+      }]).catch(console.error);
     }
   } catch (e) {
     console.error('Error fetching cloud data from Supabase', e);
@@ -606,4 +733,33 @@ export const getPresetTags = () => {
 
 export const savePresetTags = (tags) => {
   setStorageItem(KEYS.PRESET_TAGS, tags);
+};
+
+// --- ACTIVE CART PERSISTENCE (Prevents loss on refresh) ---
+export const getActiveCart = () => {
+  return getStorageItem(KEYS.ACTIVE_CART, []);
+};
+
+export const saveActiveCart = (cartItems) => {
+  setStorageItem(KEYS.ACTIVE_CART, cartItems);
+};
+
+export const clearActiveCart = () => {
+  setStorageItem(KEYS.ACTIVE_CART, []);
+};
+
+// --- MULTI-USER / MULTI-WAITER HELPERS ---
+export const DEFAULT_WAITERS = [
+  { id: 'w1', name: 'Carlos R.', role: 'Mesero', color: '#E07A5F' },
+  { id: 'w2', name: 'Mariana S.', role: 'Mesera', color: '#2A9D8F' },
+  { id: 'w3', name: 'Jorge M.', role: 'Mesero', color: '#E76F51' },
+  { id: 'w4', name: 'Andrea L.', role: 'Capitana', color: '#F4A261' }
+];
+
+export const getWaitersList = () => {
+  return getStorageItem('mestizo_pos_waiters_list', DEFAULT_WAITERS);
+};
+
+export const saveWaitersList = (waiters) => {
+  setStorageItem('mestizo_pos_waiters_list', waiters);
 };

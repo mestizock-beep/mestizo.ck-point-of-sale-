@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, CreditCard, ArrowRight, X, Check, Phone, User, AlertCircle } from 'lucide-react';
+import { DollarSign, CreditCard, ArrowRight, X, Check, Phone, User, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
 
 export default function PaymentModal({
   orderData,
@@ -16,6 +16,7 @@ export default function PaymentModal({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const tenderedNum = Number(cashTendered) || 0;
   const changeDue = Math.max(0, Number((tenderedNum - total).toFixed(2)));
@@ -39,26 +40,106 @@ export default function PaymentModal({
 
     setIsSubmitting(true);
 
-    const salePayload = {
-      items: cart,
-      subtotal: Number(Number(subtotal || 0).toFixed(2)),
-      discountAmount: Number(Number(discountAmount || 0).toFixed(2)),
-      tipAmount: Number(Number(tipAmount || 0).toFixed(2)),
-      total: Number(Number(total || 0).toFixed(2)),
-      paymentMethod,
-      tableNumber: orderData.tableNumber || null,
-      waiterName: orderData.waiterName || null,
-      cashTendered: paymentMethod === 'Efectivo' ? Number(tenderedNum.toFixed(2)) : Number(total.toFixed(2)),
-      changeDue: paymentMethod === 'Efectivo' ? changeDue : 0,
-      cardType: paymentMethod === 'Tarjeta' ? cardType : null,
-      authCode: paymentMethod === 'Tarjeta' ? authCode : null,
-      transferRef: paymentMethod === 'Transferencia' ? transferRef : null,
-      customerName: customerName.trim() || (orderData.tableNumber ? `Mesa ${orderData.tableNumber}` : 'Cliente General'),
-      customerPhone: customerPhone.trim()
-    };
+    try {
+      const salePayload = {
+        items: cart || [],
+        subtotal: Number(Number(subtotal || 0).toFixed(2)),
+        discountAmount: Number(Number(discountAmount || 0).toFixed(2)),
+        tipAmount: Number(Number(tipAmount || 0).toFixed(2)),
+        total: Number(Number(total || 0).toFixed(2)),
+        paymentMethod,
+        tableNumber: orderData.tableNumber ? Number(orderData.tableNumber) : null,
+        waiterName: orderData.waiterName || null,
+        cashTendered: paymentMethod === 'Efectivo' ? Number(tenderedNum.toFixed(2)) : Number(total.toFixed(2)),
+        changeDue: paymentMethod === 'Efectivo' ? changeDue : 0,
+        cardType: paymentMethod === 'Tarjeta' ? cardType : null,
+        authCode: paymentMethod === 'Tarjeta' ? authCode : null,
+        transferRef: paymentMethod === 'Transferencia' ? transferRef : null,
+        customerName: customerName.trim() || (orderData.tableNumber ? `Mesa ${orderData.tableNumber}` : 'Cliente General'),
+        customerPhone: customerPhone.trim()
+      };
 
-    onCompleteSale(salePayload);
+      onCompleteSale(salePayload);
+    } catch (err) {
+      console.error('Error procesando cobro:', err);
+      alert('Detalle al registrar el cobro: ' + (err.message || 'Error desconocido'));
+      setIsSubmitting(false);
+    }
   };
+
+  if (isSuccess) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(28, 43, 34, 0.85)',
+        backdropFilter: 'blur(6px)',
+        zIndex: 95,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem'
+      }}>
+        <div className="animate-fade-in" style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '24px',
+          width: '420px',
+          maxWidth: '100%',
+          padding: '2.5rem 2rem',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          border: '2px solid #C8E6C9'
+        }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            backgroundColor: '#E8F5E9',
+            color: '#2E7D32',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 8px 24px rgba(46, 125, 50, 0.25)',
+            transform: 'scale(1.1)'
+          }}>
+            <CheckCircle2 size={54} strokeWidth={2.5} />
+          </div>
+
+          <div>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2E7D32', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              ✓ COBRO COMPLETADO
+            </span>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--dark-text)', margin: '4px 0 0 0' }}>
+              ${total.toFixed(2)}
+            </h2>
+            <p style={{ fontSize: '0.9rem', color: 'var(--dark-subdued)', margin: '6px 0 0 0', fontWeight: 600 }}>
+              {orderData.tableNumber ? `Mesa #${orderData.tableNumber} cobrada y liberada con éxito` : 'Venta de mostrador registrada'}
+            </p>
+            {paymentMethod === 'Efectivo' && changeDue > 0 && (
+              <div style={{
+                marginTop: '10px',
+                padding: '8px 14px',
+                backgroundColor: '#FFF9C4',
+                color: '#F57F17',
+                borderRadius: '10px',
+                fontWeight: 800,
+                fontSize: '0.95rem'
+              }}>
+                Cambio a entregar: <strong>${changeDue.toFixed(2)}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{
