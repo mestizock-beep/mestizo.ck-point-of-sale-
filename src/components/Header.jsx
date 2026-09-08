@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine, BarChart3, Sparkles } from 'lucide-react';
+import { ShoppingBag, Package, Landmark, Printer, AlertTriangle, UserCheck, LogOut, Settings, Utensils, Flame, Wine, BarChart3, Sparkles, Receipt } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Header({
@@ -108,6 +108,31 @@ export default function Header({
               >
                 <Utensils size={18} />
                 <span>Mesas (20)</span>
+              </button>
+
+              <button
+                onClick={() => handleTabClick('sales')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  fontSize: '0.88rem',
+                  fontWeight: 700,
+                  cursor: isCajaOpen ? 'pointer' : 'not-allowed',
+                  opacity: !isCajaOpen ? 0.45 : 1,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  backgroundColor: activeTab === 'sales' ? 'var(--terracotta)' : 'transparent',
+                  color: activeTab === 'sales' ? '#FFFFFF' : 'var(--dark-subdued)',
+                  boxShadow: activeTab === 'sales' ? 'var(--shadow-sm)' : 'none'
+                }}
+                title={!isCajaOpen ? 'Debes abrir caja para ver Historial de Ventas' : ''}
+              >
+                <Receipt size={18} />
+                <span>Ventas Realizadas</span>
               </button>
 
               <button

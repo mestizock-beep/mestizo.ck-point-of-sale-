@@ -13,6 +13,7 @@ import LowStockModal from './components/LowStockModal';
 import LoginView from './components/LoginView';
 import SettingsModal from './components/SettingsModal';
 import ReportsView from './components/ReportsView';
+import SalesHistoryView from './components/SalesHistoryView';
 import AIAdvisorView from './components/AIAdvisorView';
 import AICopilotWidget from './components/AICopilotWidget';
 
@@ -550,6 +551,15 @@ export default function App() {
             onNavigateToPOS={() => setActiveTab('pos')}
             onNavigateToTables={() => setActiveTab('tables')}
             currentUser={currentUser}
+          />
+        )}
+
+        {activeTab === 'sales' && (
+          <SalesHistoryView
+            sales={sales}
+            onSelectSaleForTicket={(sale) => setTicketSale(sale)}
+            onNavigateToPOS={() => setActiveTab('pos')}
+            onNavigateToTables={() => setActiveTab('tables')}
           />
         )}
 
