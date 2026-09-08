@@ -15,6 +15,17 @@ const KEYS = {
   BACKUP_DATA: 'mestizo_pos_backup_data'
 };
 
+const safeCloudSync = (asyncFn) => {
+  if (!isSupabaseConfigured) return;
+  Promise.resolve().then(async () => {
+    try {
+      await asyncFn();
+    } catch (err) {
+      console.warn('Supabase background sync notice:', err);
+    }
+  });
+};
+
 const INITIAL_TABLES = Array.from({ length: 20 }, (_, i) => ({
   id: i + 1,
   tableNumber: i + 1,
@@ -105,12 +116,37 @@ export const calculateProductPortions = (product, insumosList = null) => {
 };
 
 export const initStorage = async () => {
-  // 1. Initial local seeding only if completely absent
+  // 1. Initial local seeding only if completely absent or merge missing default products
   if (!localStorage.getItem(KEYS.PRODUCTS)) {
     setStorageItem(KEYS.PRODUCTS, INITIAL_PRODUCTS);
+  } else {
+    // Ensure all default products exist in local products without overwriting customizations
+    const currentProds = getStorageItem(KEYS.PRODUCTS, []);
+    let modified = false;
+    INITIAL_PRODUCTS.forEach(initP => {
+      if (!currentProds.some(p => p.id === initP.id)) {
+        currentProds.push(initP);
+        modified = true;
+      }
+    });
+    if (modified) {
+      setStorageItem(KEYS.PRODUCTS, currentProds);
+    }
   }
   if (!localStorage.getItem(KEYS.INSUMOS)) {
     setStorageItem(KEYS.INSUMOS, INITIAL_INSUMOS);
+  } else {
+    const currentIns = getStorageItem(KEYS.INSUMOS, []);
+    let modifiedIns = false;
+    INITIAL_INSUMOS.forEach(initI => {
+      if (!currentIns.some(i => i.id === initI.id)) {
+        currentIns.push(initI);
+        modifiedIns = true;
+      }
+    });
+    if (modifiedIns) {
+      setStorageItem(KEYS.INSUMOS, currentIns);
+    }
   }
   if (!localStorage.getItem(KEYS.PRINTER)) {
     setStorageItem(KEYS.PRINTER, INITIAL_PRINTER_SETTINGS);
@@ -173,7 +209,7 @@ export const fetchCloudData = async () => {
         min_stock: i.minStock,
         yield_note: i.yieldNote || ''
       }));
-      supabase.from('insumos').upsert(payload).catch(console.error);
+      safeCloudSync(() => supabase.from('insumos').upsert(payload));
     }
 
     // 2. Products Merge
@@ -203,7 +239,7 @@ export const fetchCloudData = async () => {
       });
       setStorageItem(KEYS.PRODUCTS, mergedProducts);
     } else if (localProducts.length > 0) {
-      supabase.from('products').upsert(localProducts).catch(console.error);
+      safeCloudSync(() => supabase.from('products').upsert(localProducts));
     }
 
     // 3. Sales Non-Destructive Merge (Never overwrite local sales with empty cloud array)
@@ -240,7 +276,6 @@ export const fetchCloudData = async () => {
 
       const mergedSales = Array.from(salesMap.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setStorageItem(KEYS.SALES, mergedSales);
-
       // Upload any local sales that were missing in Supabase
       if (unSyncedLocalSales.length > 0) {
         const uploadPayload = unSyncedLocalSales.map(s => ({
@@ -256,7 +291,7 @@ export const fetchCloudData = async () => {
           payment_method: s.paymentMethod || 'Efectivo',
           shift_id: s.shiftId || null
         }));
-        supabase.from('sales').upsert(uploadPayload).catch(console.error);
+        safeCloudSync(() => supabase.from('sales').upsert(uploadPayload));
       }
     }
 
@@ -286,7 +321,7 @@ export const fetchCloudData = async () => {
         });
       } else if (localCurrentShift && localCurrentShift.isOpen) {
         // Cloud has no open shift, push local open shift to cloud
-        supabase.from('shifts').upsert([{
+        safeCloudSync(() => supabase.from('shifts').upsert([{
           id: localCurrentShift.id,
           opened_at: localCurrentShift.openedAt,
           cashier_name: localCurrentShift.cashierName,
@@ -298,7 +333,7 @@ export const fetchCloudData = async () => {
           total_card: localCurrentShift.totalCard,
           total_transfer: localCurrentShift.totalTransfer,
           sales: localCurrentShift.sales
-        }]).catch(console.error);
+        }]));
       }
 
       // Merge shift history by ID
@@ -308,8 +343,8 @@ export const fetchCloudData = async () => {
           id: s.id,
           openedAt: s.opened_at,
           closedAt: s.closed_at,
-          cashierName: s.cashier_name,
-          initialCash: Number(s.initial_cash),
+          cashier_name: s.cashier_name,
+          initial_cash: Number(s.initial_cash),
           isOpen: false,
           salesCount: Number(s.sales_count),
           totalRevenue: Number(s.total_revenue),
@@ -333,7 +368,7 @@ export const fetchCloudData = async () => {
       setStorageItem(KEYS.SHIFT_HISTORY, mergedHistory);
     } else if (localCurrentShift && localCurrentShift.isOpen) {
       // Cloud is empty, push local shift
-      supabase.from('shifts').upsert([{
+      safeCloudSync(() => supabase.from('shifts').upsert([{
         id: localCurrentShift.id,
         opened_at: localCurrentShift.openedAt,
         cashier_name: localCurrentShift.cashierName,
@@ -345,7 +380,7 @@ export const fetchCloudData = async () => {
         total_card: localCurrentShift.totalCard,
         total_transfer: localCurrentShift.totalTransfer,
         sales: localCurrentShift.sales
-      }]).catch(console.error);
+      }]));
     }
   } catch (e) {
     console.error('Error fetching cloud data from Supabase', e);
@@ -356,7 +391,7 @@ export const resetToOfficialMenu = () => {
   setStorageItem(KEYS.PRODUCTS, INITIAL_PRODUCTS);
   setStorageItem(KEYS.INSUMOS, INITIAL_INSUMOS);
   if (isSupabaseConfigured) {
-    supabase.from('products').upsert(INITIAL_PRODUCTS).catch(console.error);
+    safeCloudSync(() => supabase.from('products').upsert(INITIAL_PRODUCTS));
     const insumosPayload = INITIAL_INSUMOS.map(i => ({
       id: i.id,
       name: i.name,
@@ -365,7 +400,7 @@ export const resetToOfficialMenu = () => {
       min_stock: i.minStock,
       yield_note: i.yieldNote || ''
     }));
-    supabase.from('insumos').upsert(insumosPayload).catch(console.error);
+    safeCloudSync(() => supabase.from('insumos').upsert(insumosPayload));
   }
   return { products: INITIAL_PRODUCTS, insumos: INITIAL_INSUMOS };
 };
@@ -383,7 +418,7 @@ export const saveInsumos = (insumos) => {
       min_stock: i.minStock,
       yield_note: i.yieldNote || ''
     }));
-    supabase.from('insumos').upsert(payload).catch(console.error);
+    safeCloudSync(() => supabase.from('insumos').upsert(payload));
   }
 };
 
@@ -405,9 +440,9 @@ export const getProducts = () => getStorageItem(KEYS.PRODUCTS, INITIAL_PRODUCTS)
 export const saveProducts = (products) => {
   setStorageItem(KEYS.PRODUCTS, products);
   if (isSupabaseConfigured) {
-    supabase.from('products').upsert(products).catch(console.error);
+    safeCloudSync(() => supabase.from('products').upsert(products));
   }
-};
+};;
 
 export const getSales = () => getStorageItem(KEYS.SALES, []);
 
@@ -442,14 +477,29 @@ export const addSale = (saleData) => {
       const product = products.find(p => p.id === cartItem.id);
       if (product && product.recipe && Array.isArray(product.recipe)) {
         product.recipe.forEach(recipeItem => {
+          // If a custom beer was selected (e.g. for Micheladas/Cheladas), substitute the beer insumo ID
+          const effectiveInsumoId = (cartItem.selectedBeerInsumoId && ['ins-015', 'ins-016', 'ins-017', 'ins-018'].includes(recipeItem.insumoId))
+            ? cartItem.selectedBeerInsumoId
+            : recipeItem.insumoId;
+
           const requiredAmount = (Number(recipeItem.quantity) || 0) * (Number(cartItem.quantity) || 1);
           insumos = insumos.map(ins => {
-            if (ins.id === recipeItem.insumoId) {
+            if (ins.id === effectiveInsumoId) {
               const newStock = Math.max(0, Number(((Number(ins.stock) || 0) - requiredAmount).toFixed(3)));
               return { ...ins, stock: newStock };
             }
             return ins;
           });
+        });
+      } else if (cartItem.selectedBeerInsumoId) {
+        // Direct beer insumo deduction if no formal recipe exists
+        const requiredAmount = Number(cartItem.quantity) || 1;
+        insumos = insumos.map(ins => {
+          if (ins.id === cartItem.selectedBeerInsumoId) {
+            const newStock = Math.max(0, Number(((Number(ins.stock) || 0) - requiredAmount).toFixed(3)));
+            return { ...ins, stock: newStock };
+          }
+          return ins;
         });
       }
     });
@@ -475,7 +525,7 @@ export const addSale = (saleData) => {
 
   // Push to Supabase if configured
   if (isSupabaseConfigured) {
-    supabase.from('sales').insert([{
+    safeCloudSync(() => supabase.from('sales').insert([{
       id: newSale.id,
       timestamp: newSale.timestamp,
       items: newSale.items || [],
@@ -487,10 +537,10 @@ export const addSale = (saleData) => {
       total: cleanTotal,
       payment_method: newSale.paymentMethod || 'Efectivo',
       shift_id: updatedShift ? updatedShift.id : null
-    }]).catch(console.error);
+    }]));
 
     if (updatedShift) {
-      supabase.from('shifts').upsert([{
+      safeCloudSync(() => supabase.from('shifts').upsert([{
         id: updatedShift.id,
         opened_at: updatedShift.openedAt,
         cashier_name: updatedShift.cashierName,
@@ -502,7 +552,7 @@ export const addSale = (saleData) => {
         total_card: updatedShift.totalCard,
         total_transfer: updatedShift.totalTransfer,
         sales: updatedShift.sales
-      }]).catch(console.error);
+      }]));
     }
   }
 
@@ -514,7 +564,7 @@ export const getCurrentShift = () => getStorageItem(KEYS.CURRENT_SHIFT, null);
 export const saveCurrentShift = (shift) => {
   setStorageItem(KEYS.CURRENT_SHIFT, shift);
   if (isSupabaseConfigured && shift) {
-    supabase.from('shifts').upsert([{
+    safeCloudSync(() => supabase.from('shifts').upsert([{
       id: shift.id,
       opened_at: shift.openedAt,
       cashier_name: shift.cashierName,
@@ -526,7 +576,7 @@ export const saveCurrentShift = (shift) => {
       total_card: shift.totalCard,
       total_transfer: shift.totalTransfer,
       sales: shift.sales
-    }]).catch(console.error);
+    }]));
   }
 };
 
@@ -573,7 +623,7 @@ export const closeShift = (actualPhysicalCash, notes = '') => {
   setStorageItem(KEYS.CURRENT_SHIFT, null);
 
   if (isSupabaseConfigured) {
-    supabase.from('shifts').upsert([{
+    safeCloudSync(() => supabase.from('shifts').upsert([{
       id: closedShift.id,
       opened_at: closedShift.openedAt,
       closed_at: closedShift.closedAt,
@@ -590,7 +640,7 @@ export const closeShift = (actualPhysicalCash, notes = '') => {
       expected_cash: closedShift.expectedCash,
       discrepancy: closedShift.discrepancy,
       notes: closedShift.notes
-    }]).catch(console.error);
+    }]));
   }
 
   return closedShift;
@@ -603,14 +653,14 @@ export const getPrinterSettings = () => getStorageItem(KEYS.PRINTER, INITIAL_PRI
 export const savePrinterSettings = (settings) => {
   setStorageItem(KEYS.PRINTER, settings);
   if (isSupabaseConfigured) {
-    supabase.from('printer_settings').upsert([{
+    safeCloudSync(() => supabase.from('printer_settings').upsert([{
       id: 'default',
       paper_width: settings.paperWidth || '80mm',
       header_title: settings.headerTitle || 'MESTIZO COMEDOR & BAR',
       header_subtitle: settings.headerSubtitle || 'Tacos, Tortas, Chelas & Cocteles',
       footer_message: settings.footerMessage || '¡Gracias por tu visita! Vuelve pronto.',
       auto_print: Boolean(settings.autoPrint)
-    }]).catch(console.error);
+    }]));
   }
 };
 

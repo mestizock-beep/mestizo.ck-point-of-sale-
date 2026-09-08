@@ -60,6 +60,7 @@ export default function TableManagementView({
 
   // Quick Instant Customizer state
   const [quickAddProduct, setQuickAddProduct] = useState(null);
+  const [selectedBeer, setSelectedBeer] = useState(null);
   const [selectedChips, setSelectedChips] = useState([]);
   const [customNoteText, setCustomNoteText] = useState('');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
@@ -71,6 +72,25 @@ export default function TableManagementView({
   }, []);
 
   const presetTags = getPresetTags();
+
+  // Beer options available for micheladas in Table Management
+  const beerOptions = [
+    { name: 'XX Lager', insumoId: 'ins-015', sku: 'CER-01' },
+    { name: 'Tecate Light', insumoId: 'ins-016', sku: 'CER-02' },
+    { name: 'Indio', insumoId: 'ins-017', sku: 'CER-03' },
+    { name: 'Michelob Ultra', insumoId: 'ins-018', sku: 'CER-04' }
+  ].map(b => {
+    const ins = insumos.find(i => i.id === b.insumoId);
+    const currentStock = ins ? Number(ins.stock) || 0 : 0;
+    return { ...b, stock: currentStock };
+  });
+
+  const isMicheProduct = (product) => {
+    if (!product) return false;
+    const cat = (product.category || '').toLowerCase();
+    const name = (product.name || '').toLowerCase();
+    return cat.includes('miche') || name.includes('michelada') || name.includes('chelada');
+  };
 
   // Filter products for adding to table
   const filteredProducts = products.filter(p => {
@@ -117,6 +137,13 @@ export default function TableManagementView({
     setQuickAddProduct(product);
     setSelectedChips([]);
     setCustomNoteText('');
+
+    if (isMicheProduct(product)) {
+      const firstAvailableBeer = beerOptions.find(b => b.stock > 0) || beerOptions[0];
+      setSelectedBeer(firstAvailableBeer);
+    } else {
+      setSelectedBeer(null);
+    }
   };
 
   const toggleChip = (chipText) => {
@@ -131,16 +158,34 @@ export default function TableManagementView({
 
   const handleConfirmQuickAdd = () => {
     if (!quickAddProduct) return;
-    const notesArray = [...selectedChips];
+    const notesArray = [];
+    
+    let beerName = '';
+    let beerInsumoId = null;
+
+    if (isMicheProduct(quickAddProduct) && selectedBeer) {
+      if (selectedBeer.stock <= 0) {
+        alert(`La cerveza seleccionada (${selectedBeer.name}) está agotada en stock. Por favor elige otra cerveza.`);
+        return;
+      }
+      notesArray.push(`Cerveza: ${selectedBeer.name}`);
+      beerName = selectedBeer.name;
+      beerInsumoId = selectedBeer.insumoId;
+    }
+
+    selectedChips.forEach(c => notesArray.push(c));
     if (customNoteText.trim()) notesArray.push(customNoteText.trim());
     const finalNote = notesArray.join(', ');
 
     handleAddItemToTable({
       ...quickAddProduct,
+      selectedBeerName: beerName,
+      selectedBeerInsumoId: beerInsumoId,
       note: finalNote
     });
 
     setQuickAddProduct(null);
+    setSelectedBeer(null);
     setSelectedChips([]);
     setCustomNoteText('');
   };
@@ -1385,7 +1430,7 @@ export default function TableManagementView({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--terracotta)', textTransform: 'uppercase' }}>
-                  PERSONALIZAR PARA COCINA
+                  {isMicheProduct(quickAddProduct) ? '🍺 PERSONALIZAR MICHELADA' : 'PERSONALIZAR PARA COCINA'}
                 </span>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--dark-text)', margin: '2px 0 0 0' }}>
                   {quickAddProduct.name}
@@ -1408,6 +1453,70 @@ export default function TableManagementView({
                 <X size={16} />
               </button>
             </div>
+
+            {/* Beer Selector if Michelada/Chelada */}
+            {isMicheProduct(quickAddProduct) && (
+              <div style={{
+                backgroundColor: 'var(--sand-bg)',
+                padding: '10px 12px',
+                borderRadius: '14px',
+                border: '1.5px solid var(--sand-border)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--dark-text)', margin: 0 }}>
+                    🍻 Elige la Cerveza base (En Stock):
+                  </label>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--terracotta)' }}>
+                    {selectedBeer ? `${selectedBeer.name} (${selectedBeer.stock} pzas)` : 'Selecciona una'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {beerOptions.map(beer => {
+                    const isSelected = selectedBeer?.insumoId === beer.insumoId;
+                    const isOutOfStock = beer.stock <= 0;
+
+                    return (
+                      <button
+                        key={beer.insumoId}
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={() => setSelectedBeer(beer)}
+                        style={{
+                          padding: '10px 8px',
+                          borderRadius: '12px',
+                          border: isSelected ? '2px solid var(--terracotta)' : '1.5px solid var(--sand-border)',
+                          backgroundColor: isSelected ? '#FFF0EA' : (isOutOfStock ? '#F5F5F5' : '#FFFFFF'),
+                          color: isOutOfStock ? '#999' : (isSelected ? 'var(--terracotta)' : 'var(--dark-text)'),
+                          fontWeight: isSelected ? 800 : 700,
+                          fontSize: '0.84rem',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '3px',
+                          opacity: isOutOfStock ? 0.6 : 1,
+                          boxShadow: isSelected ? '0 2px 8px rgba(199, 91, 57, 0.2)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {isSelected && <Check size={14} color="var(--terracotta)" />}
+                          <span>{beer.name}</span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          color: isOutOfStock ? 'var(--danger)' : (beer.stock <= 5 ? 'var(--warning)' : 'var(--forest)')
+                        }}>
+                          {isOutOfStock ? '❌ Agotada' : `📦 Stock: ${beer.stock}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Modifiers Chips Bar */}
             <div>

@@ -23,8 +23,39 @@ export default function POSView({
   
   // Quick Instant Customizer state
   const [quickAddProduct, setQuickAddProduct] = useState(null);
+  const [selectedBeer, setSelectedBeer] = useState(null);
   const [selectedChips, setSelectedChips] = useState([]);
   const [customNoteText, setCustomNoteText] = useState('');
+
+  const presetTags = getPresetTags();
+
+  // Beer options available for micheladas
+  const beerOptions = [
+    { name: 'XX Lager', insumoId: 'ins-015', sku: 'CER-01' },
+    { name: 'Tecate Light', insumoId: 'ins-016', sku: 'CER-02' },
+    { name: 'Indio', insumoId: 'ins-017', sku: 'CER-03' },
+    { name: 'Michelob Ultra', insumoId: 'ins-018', sku: 'CER-04' }
+  ].map(b => {
+    const ins = insumos.find(i => i.id === b.insumoId);
+    const currentStock = ins ? Number(ins.stock) || 0 : 0;
+    return { ...b, stock: currentStock };
+  });
+
+  const getPresetOptionsForProduct = (product) => {
+    if (!product) return [];
+    const cat = (product.category || '').toLowerCase();
+    if (cat.includes('taco')) return presetTags.tacos || [];
+    if (cat.includes('cerveza') || cat.includes('coctel') || cat.includes('miche') || cat.includes('bebida') || cat.includes('sin alcohol')) return presetTags.bebidas || [];
+    if (cat.includes('botana')) return presetTags.botanas || [];
+    return presetTags.general || [];
+  };
+
+  const isMicheProduct = (product) => {
+    if (!product) return false;
+    const cat = (product.category || '').toLowerCase();
+    const name = (product.name || '').toLowerCase();
+    return cat.includes('miche') || name.includes('michelada') || name.includes('chelada');
+  };
 
   const [mobileTab, setMobileTab] = useState('menu'); // 'menu' | 'cart'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
@@ -53,6 +84,13 @@ export default function POSView({
     setQuickAddProduct(product);
     setSelectedChips([]);
     setCustomNoteText('');
+
+    if (isMicheProduct(product)) {
+      const firstAvailableBeer = beerOptions.find(b => b.stock > 0) || beerOptions[0];
+      setSelectedBeer(firstAvailableBeer);
+    } else {
+      setSelectedBeer(null);
+    }
   };
 
   const toggleChip = (chipText) => {
@@ -65,13 +103,33 @@ export default function POSView({
 
   const handleConfirmQuickAdd = () => {
     if (!quickAddProduct) return;
-    const notesArray = [...selectedChips];
+    const notesArray = [];
+    
+    let beerName = '';
+    let beerInsumoId = null;
+
+    if (isMicheProduct(quickAddProduct) && selectedBeer) {
+      if (selectedBeer.stock <= 0) {
+        alert(`La cerveza seleccionada (${selectedBeer.name}) está agotada en stock. Por favor elige otra cerveza.`);
+        return;
+      }
+      notesArray.push(`Cerveza: ${selectedBeer.name}`);
+      beerName = selectedBeer.name;
+      beerInsumoId = selectedBeer.insumoId;
+    }
+
+    selectedChips.forEach(c => notesArray.push(c));
     if (customNoteText.trim()) notesArray.push(customNoteText.trim());
     const finalNote = notesArray.join(', ');
 
-    addToCartCustomized(quickAddProduct, finalNote);
+    addToCartCustomized({
+      ...quickAddProduct,
+      selectedBeerName: beerName,
+      selectedBeerInsumoId: beerInsumoId
+    }, finalNote);
 
     setQuickAddProduct(null);
+    setSelectedBeer(null);
     setSelectedChips([]);
     setCustomNoteText('');
   };
@@ -83,30 +141,49 @@ export default function POSView({
       return;
     }
 
+    const itemUniqueKey = `${product.id}_${product.selectedBeerInsumoId || ''}_${note}`;
+
     setCart(prevCart => {
-      const existing = prevCart.find(item => item.id === product.id && (item.note || '') === note);
+      const existing = prevCart.find(item => 
+        item.id === product.id && 
+        (item.note || '') === note &&
+        (item.selectedBeerInsumoId || '') === (product.selectedBeerInsumoId || '')
+      );
       if (existing) {
         if (existing.quantity >= availableStock) {
           alert(`No hay más unidades preparables de "${product.name}". Máximo por insumos: ${availableStock}`);
           return prevCart;
         }
         return prevCart.map(item =>
-          (item.id === product.id && (item.note || '') === note) ? { ...item, quantity: item.quantity + 1 } : item
+          (item.id === product.id && (item.note || '') === note && (item.selectedBeerInsumoId || '') === (product.selectedBeerInsumoId || ''))
+            ? { ...item, quantity: item.quantity + 1 } 
+            : item
         );
       } else {
-        return [...prevCart, { ...product, quantity: 1, note, maxPortions: availableStock }];
+        return [...prevCart, { 
+          ...product, 
+          cartItemId: itemUniqueKey,
+          quantity: 1, 
+          note, 
+          maxPortions: availableStock 
+        }];
       }
     });
   };
 
   const addToCart = (product) => {
+    if (isMicheProduct(product)) {
+      handleOpenQuickAdd(product);
+      return;
+    }
     addToCartCustomized(product, '');
   };
 
-  const updateQuantity = (id, delta) => {
+  const updateQuantity = (cartItemKey, delta) => {
     setCart(prevCart => {
       return prevCart.map(item => {
-        if (item.id === id) {
+        const itemKey = item.cartItemId || item.id;
+        if (itemKey === cartItemKey || item.id === cartItemKey) {
           const newQty = item.quantity + delta;
           if (newQty <= 0) return null;
           const product = products.find(p => p.id === item.id) || item;
@@ -122,15 +199,18 @@ export default function POSView({
     });
   };
 
-  const removeFromCart = (id) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== id));
+  const removeFromCart = (cartItemKey) => {
+    setCart(prevCart => prevCart.filter(item => (item.cartItemId || item.id) !== cartItemKey && item.id !== cartItemKey));
   };
 
   const handleSaveNote = () => {
     if (!itemNoteModal) return;
-    setCart(prevCart => prevCart.map(item =>
-      item.id === itemNoteModal.itemId ? { ...item, note: noteInput } : item
-    ));
+    setCart(prevCart => prevCart.map(item => {
+      const itemKey = item.cartItemId || item.id;
+      return (itemKey === itemNoteModal.itemId || item.id === itemNoteModal.itemId)
+        ? { ...item, note: noteInput } 
+        : item;
+    }));
     setItemNoteModal(null);
     setNoteInput('');
   };
@@ -560,9 +640,11 @@ export default function POSView({
               <p style={{ fontSize: '0.82rem', marginTop: '4px', opacity: 0.8 }}>Selecciona platillos del menú para comenzar la orden</p>
             </div>
           ) : (
-            cart.map(item => (
+            cart.map((item, idx) => {
+              const itemKey = item.cartItemId || `${item.id}_${idx}`;
+              return (
               <div
-                key={item.id}
+                key={itemKey}
                 style={{
                   backgroundColor: 'var(--sand-bg)',
                   borderRadius: '10px',
@@ -593,7 +675,7 @@ export default function POSView({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
                   <button
                     onClick={() => {
-                      setItemNoteModal({ itemId: item.id, currentNote: item.note || '' });
+                      setItemNoteModal({ itemId: itemKey, currentNote: item.note || '' });
                       setNoteInput(item.note || '');
                     }}
                     style={{
@@ -613,7 +695,7 @@ export default function POSView({
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button
-                      onClick={() => updateQuantity(item.id, -1)}
+                      onClick={() => updateQuantity(itemKey, -1)}
                       style={{
                         width: '26px',
                         height: '26px',
@@ -634,7 +716,7 @@ export default function POSView({
                     </span>
 
                     <button
-                      onClick={() => updateQuantity(item.id, 1)}
+                      onClick={() => updateQuantity(itemKey, 1)}
                       style={{
                         width: '26px',
                         height: '26px',
@@ -651,7 +733,7 @@ export default function POSView({
                     </button>
 
                     <button
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => removeFromCart(itemKey)}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -665,7 +747,7 @@ export default function POSView({
                   </div>
                 </div>
               </div>
-            ))
+            );})
           )}
         </div>
 
@@ -924,6 +1006,212 @@ export default function POSView({
           }}>
             <span>Ver Orden</span>
             <ArrowRight size={16} />
+          </div>
+        </div>
+      )}
+
+      {/* QUICK INSTANT CUSTOMIZER & BEER SELECTOR MODAL */}
+      {quickAddProduct && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(28, 43, 34, 0.75)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 200,
+          display: 'flex',
+          alignItems: isMobile ? 'flex-end' : 'center',
+          justifyContent: 'center',
+          padding: isMobile ? '0' : '1rem'
+        }}>
+          <div className="animate-fade-in" style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: isMobile ? '24px 24px 0 0' : '20px',
+            width: '100%',
+            maxWidth: '480px',
+            padding: '1.25rem',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--terracotta)', textTransform: 'uppercase' }}>
+                  {isMicheProduct(quickAddProduct) ? '🍺 PERSONALIZAR MICHELADA' : 'PERSONALIZAR PLATILLO'}
+                </span>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--dark-text)', margin: '2px 0 0 0' }}>
+                  {quickAddProduct.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setQuickAddProduct(null)}
+                style={{
+                  border: 'none',
+                  backgroundColor: 'var(--sand-muted)',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Beer Selector if Michelada/Chelada */}
+            {isMicheProduct(quickAddProduct) && (
+              <div style={{
+                backgroundColor: 'var(--sand-bg)',
+                padding: '10px 12px',
+                borderRadius: '14px',
+                border: '1.5px solid var(--sand-border)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--dark-text)', margin: 0 }}>
+                    🍻 Elige la Cerveza base (En Stock):
+                  </label>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--terracotta)' }}>
+                    {selectedBeer ? `${selectedBeer.name} (${selectedBeer.stock} pzas)` : 'Selecciona una'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {beerOptions.map(beer => {
+                    const isSelected = selectedBeer?.insumoId === beer.insumoId;
+                    const isOutOfStock = beer.stock <= 0;
+
+                    return (
+                      <button
+                        key={beer.insumoId}
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={() => setSelectedBeer(beer)}
+                        style={{
+                          padding: '10px 8px',
+                          borderRadius: '12px',
+                          border: isSelected ? '2px solid var(--terracotta)' : '1.5px solid var(--sand-border)',
+                          backgroundColor: isSelected ? '#FFF0EA' : (isOutOfStock ? '#F5F5F5' : '#FFFFFF'),
+                          color: isOutOfStock ? '#999' : (isSelected ? 'var(--terracotta)' : 'var(--dark-text)'),
+                          fontWeight: isSelected ? 800 : 700,
+                          fontSize: '0.84rem',
+                          cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '3px',
+                          opacity: isOutOfStock ? 0.6 : 1,
+                          boxShadow: isSelected ? '0 2px 8px rgba(199, 91, 57, 0.2)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          {isSelected && <CheckCircle size={14} color="var(--terracotta)" />}
+                          <span>{beer.name}</span>
+                        </div>
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: 700,
+                          color: isOutOfStock ? 'var(--danger)' : (beer.stock <= 5 ? 'var(--warning)' : 'var(--forest)')
+                        }}>
+                          {isOutOfStock ? '❌ Agotada' : `📦 Stock: ${beer.stock}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Modifiers Chips Bar */}
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--dark-text)', display: 'block', marginBottom: '8px' }}>
+                Modificadores Rápidos Táctiles:
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {getPresetOptionsForProduct(quickAddProduct).map(chip => {
+                  const isSelected = selectedChips.includes(chip);
+                  return (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => toggleChip(chip)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '20px',
+                        border: isSelected ? '2px solid var(--terracotta)' : '1px solid var(--sand-border)',
+                        backgroundColor: isSelected ? '#FFF0EA' : '#FFFFFF',
+                        color: isSelected ? 'var(--terracotta)' : 'var(--dark-text)',
+                        fontWeight: 700,
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      {isSelected && <CheckCircle size={14} />}
+                      <span>{chip}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom note input */}
+            <div>
+              <label style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--dark-text)', display: 'block', marginBottom: '6px' }}>
+                Instrucción Especial Escrita:
+              </label>
+              <input
+                type="text"
+                placeholder={isMicheProduct(quickAddProduct) ? "Ej. bien fría, escarchado ligero, clamato..." : "Ej. sin cebolla, término medio, salsa aparte..."}
+                value={customNoteText}
+                onChange={(e) => setCustomNoteText(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '12px',
+                  border: '1.5px solid var(--sand-border)',
+                  fontSize: '0.9rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* Confirm Add Button */}
+            <button
+              onClick={handleConfirmQuickAdd}
+              style={{
+                backgroundColor: 'var(--terracotta)',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '14px',
+                borderRadius: '14px',
+                fontSize: '0.95rem',
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(199, 91, 57, 0.3)'
+              }}
+            >
+              <Plus size={18} />
+              <span>
+                Agregar a Comanda • ${quickAddProduct.price}
+                {selectedBeer ? ` (${selectedBeer.name})` : ''}
+              </span>
+            </button>
           </div>
         </div>
       )}

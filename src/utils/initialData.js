@@ -608,6 +608,30 @@ export const INITIAL_PRODUCTS = [
       { insumoId: 'ins-020', quantity: 0.08 }
     ]
   },
+  {
+    id: 'prod-803',
+    sku: 'MIC-03',
+    name: 'Michelada Clásica',
+    category: 'Miches',
+    price: 75,
+    description: 'Cerveza helada con limón, salsas negras especiales y escarchado con chamoy/tajín.',
+    image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=400&q=80',
+    recipe: [
+      { insumoId: 'ins-015', quantity: 1 }
+    ]
+  },
+  {
+    id: 'prod-804',
+    sku: 'MIC-04',
+    name: 'Chelada',
+    category: 'Miches',
+    price: 70,
+    description: 'Cerveza helada con jugo de limón fresco y escarchado tradicional de sal de mar.',
+    image: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=400&q=80',
+    recipe: [
+      { insumoId: 'ins-015', quantity: 1 }
+    ]
+  },
 
   {
     id: 'prod-901',
